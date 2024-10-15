@@ -7,14 +7,17 @@ export default function Home() {
   const [items, setItems] = useState<Item[]>([]);
 
   useEffect(() => {
-    fetch("http://localhost:3000/item")
+    fetch(`${process.env.REACT_APP_BACKEND_HOST}/item`)
       .then((res) => res.json())
-      .then((data) => setItems(data));
+      .then((data) => {
+        if (data.length > 0) {
+          setItems(data);
+        }
+      });
   }, []);
 
   return (
     <div>
-     
       <div className="bg-ivory">
         <main className="container mx-auto px-6 py-12 flex flex-col md:flex-row items-center">
           <div className="md:w-1/2 mb-8 md:mb-0">

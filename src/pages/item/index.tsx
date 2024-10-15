@@ -2,6 +2,10 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Item } from "../../types/item";
 import { ChevronRight } from "lucide-react";
+import { formatCurrency } from "../../utils/currency";
+import { useAppDispatch } from "../../lib/hooks";
+import { addItem } from "../../lib/features/cart/cart-slice";
+import ItemCarousel from "../../components/ItemCarousel";
 
 type ItemParams = {
   id: string;
@@ -10,18 +14,31 @@ type ItemParams = {
 const ItemComponent: React.FC = () => {
   const { id } = useParams<ItemParams>();
   const [item, setItem] = useState<Item>();
+  const [suggestedItems, setSuggestedItems] = useState<Item[]>([]);
+
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
-    fetch(`http://localhost:3000/item/${id}`)
+    fetch(`${process.env.REACT_APP_BACKEND_HOST}/item/${id}`)
       .then((response) => response.json())
       .then((data) => {
         setItem(data);
       });
-  }, []);
+
+    fetch(`${process.env.REACT_APP_BACKEND_HOST}/item`)
+      .then((response) => response.json())
+      .then((data) => {
+        setSuggestedItems(data);
+      });
+  }, [id]);
+
+  const handleAddToCart = () => {
+    item && dispatch(addItem({ ...item, id: item?._id, quantity: 1 }));
+  };
 
   const paintItem = (item: Item) => {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="container grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="bg-gray-100 rounded-lg overflow-hidden">
           <img
             src={item.imgUrl}
@@ -32,19 +49,24 @@ const ItemComponent: React.FC = () => {
 
         <div>
           <h1 className="text-3xl font-bold mb-2">{item.name}</h1>
-          <p className="text-2xl font-semibold mb-4">{item.price}</p>
+          <p className="text-xl font-semibold mb-4">
+            {formatCurrency(item.price)}
+          </p>
           <p className="text-gray-600 mb-6">{item.description}</p>
-          <button className="w-full bg-teal text-white py-3 rounded-md hover:bg-blue-700 transition-colors">
+          <button
+            onClick={handleAddToCart}
+            className="w-full bg-teal text-white py-3 rounded-md hover:bg-green-700 transition-colors"
+          >
             Add to cart
           </button>
         </div>
       </div>
     );
-  }
+  };
 
   const paintItemLoading = () => {
-    return (<div>loading...</div>);
-  }
+    return <div>loading...</div>;
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -66,7 +88,8 @@ const ItemComponent: React.FC = () => {
 
       {item ? paintItem(item) : paintItemLoading()}
 
-      
+      <h2 className="text-2xl font-bold mt-8 mb-4">Suggested items</h2>
+      <ItemCarousel items={suggestedItems} />
     </div>
   );
 };

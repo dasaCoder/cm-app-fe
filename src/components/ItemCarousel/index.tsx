@@ -13,13 +13,13 @@ const ItemCarousel: React.FC<CarouselProps> = ({ items, title }) => {
       dots: true,
       infinite: true,
       speed: 500,
-      slidesToShow: 5,
+      slidesToShow: 4,
       slidesToScroll: 4,
       responsive: [
           {
               breakpoint: 1920,
               settings: {
-                  slidesToShow: 5,
+                  slidesToShow: 4,
                   slidesToScroll: 2,
               }
           },

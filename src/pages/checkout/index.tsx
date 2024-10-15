@@ -1,9 +1,699 @@
-import React from 'react';
+import {
+  Select,
+  Checkbox,
+  Button,
+  RadioGroup,
+  Label,
+  Radio,
+} from "@headlessui/react";
+import { CheckCircleIcon, CheckIcon, InfoIcon, Loader } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "../../components/ui/card";
+import { useFormik } from "formik";
+import checkoutFormSchema from "../../lib/validation-schemas/checkout-form";
+import { cn } from "../../utils/tailwind";
+import { formatCurrency } from "../../utils/currency";
+import { useAppSelector } from "../../lib/hooks";
+import { useNavigate } from "react-router-dom";
+import CheckoutSkeleton from "./loader";
+
+enum CurrentStep {
+  "SHIPPING_DETAILS",
+  "DELIVERY_ADDRESS",
+  "DELIVERY",
+  "PAYMENT",
+  "REVIEW",
+  "PAYMENT_CONFIRMATION",
+  "ORDER_PLACED",
+}
 
 const Checkout: React.FC = () => {
+  const { items, subtotal } = useAppSelector((state) => state.cart);
+  const [billingAddressSame, setBillingAddressSame] = useState(true);
+  const [currentStep, setCurrentStep] = useState<CurrentStep>(
+    CurrentStep.REVIEW
+  );
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  setTimeout(()=> {
+    setIsLoading(false);
+  }, 3000);
+
+  const router = useNavigate();
+
+  const deliveryMethodList = [
+    {
+      id: "1",
+      name: "Standard Delivery",
+      description: "Within 72 Hours",
+      price: 300,
+    },
+    {
+      id: "2",
+      name: "Express Delivery",
+      description: "Within 30 Hours inside colombo",
+      price: 600,
+    },
+  ];
+
+  const paymentMethodList = [
+    {
+      id: "1",
+      name: "Debit / Credit Card",
+      description: "Visa, Mastercard, American Express",
+      icon: "images/icons/credit-card.png",
+    },
+    {
+      id: "2",
+      name: "Bank Transfer",
+      description: "Make your payment directly into our bank account",
+      icon: "images/icons/bank-transfer.png",
+    },
+    {
+      id: "3",
+      name: "Cash on Delivery",
+      description: "Pay with cash upon delivery",
+      icon: "images/icons/cash-on-delivery.png",
+    },
+  ];
+
+  const [selectedDeliveryMethod, setSelectedDeliveryMethod] = useState(
+    deliveryMethodList[0]
+  );
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
+    paymentMethodList[0]
+  );
+
+  const formik = useFormik({
+    validationSchema: checkoutFormSchema,
+    initialValues: {
+      first_name: "",
+      last_name: "",
+      address: "",
+      company: "",
+      postal_code: "",
+      city: "",
+      state: "",
+      email: "",
+      phone: "",
+      deliveryMethod: "1",
+    },
+    onSubmit: (values) => {
+      console.log(values);
+    },
+  });
+
+  const handleValidate = async () => {
+    const errors = await formik.validateForm();
+    if (Object.keys(errors).length === 0) {
+      setCurrentStep(CurrentStep.DELIVERY);
+    }
+  };
+
+  const handleGoToPayment = () => {
+    setCurrentStep(CurrentStep.PAYMENT);
+  };
+
+  const handleReview = () => {
+    setCurrentStep(CurrentStep.REVIEW);
+  };
+
+  const handleDeliveryEdit = () => {
+    setCurrentStep(CurrentStep.DELIVERY);
+  };
+
+  const handleDiscount = () => {
+    console.log("Discount applied");
+  };
+
+  const handlePayAction = () => {
+    setIsProcessing(true);
+    console.log("Payment action");
+    console.log({...formik.values, deliveryMethod: selectedDeliveryMethod.id, paymentMethodList: selectedPaymentMethod.id});
+    setTimeout(() => {
+      setIsProcessing(false);
+      router(`/order-confirmation`);
+    }, 2000);
+    
+  }
+
+  const calculateTotal = useMemo(() => {
+    return formatCurrency(subtotal + selectedDeliveryMethod.price);
+  }, [subtotal, selectedDeliveryMethod]);
+
+  if(isLoading) {
+    return <CheckoutSkeleton />
+  }
+
   return (
-    <div className="p-4">
-      <h1 className="text-2xl">Checkout Page</h1>
+    <div className="container mx-auto px-4 py-8 animate-">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="md:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Shipping Address</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {currentStep !== CurrentStep.SHIPPING_DETAILS && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h3 className="font-semibold">Shipping Address</h3>
+                      <p>{formik.values.address}</p>
+                      <p>{formik.values.city}</p>
+                      <p>{`${formik.values.postal_code}, ${formik.values.state}`}</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Contact</h3>
+                      <p>{`${formik.values.phone}, ${formik.values.email}`}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <h3 className="font-semibold">Billing Address</h3>
+                      <p>Billing and delivery address are the same.</p>
+                    </div>
+                  </div>
+                  <Button
+                    className="text-blue-500 text-sm mt-3"
+                    onClick={() => setCurrentStep(CurrentStep.SHIPPING_DETAILS)}
+                  >
+                    Edit
+                  </Button>
+                </>
+              )}
+              {currentStep === CurrentStep.SHIPPING_DETAILS && (
+                <form className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label
+                        htmlFor="firstName"
+                        className="mb-2 block text-sm font-medium text-gray-900"
+                      >
+                        First name
+                      </label>
+                      <input
+                        type="text"
+                        id="firstName"
+                        name="first_name"
+                        value={formik.values.first_name}
+                        onChange={formik.handleChange}
+                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
+                        placeholder="Bonnie"
+                      />
+                      {formik.errors.first_name && (
+                        <p className="text-red-500 text-sm">
+                          {formik.errors.first_name}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="lastName"
+                        className="mb-2 block text-sm font-medium text-gray-900"
+                      >
+                        Last name
+                      </label>
+                      <input
+                        type="text"
+                        id="lastName"
+                        name="last_name"
+                        value={formik.values.last_name}
+                        onChange={formik.handleChange}
+                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
+                        placeholder="Bonnie"
+                      />
+                      {formik.errors.last_name && (
+                        <p className="text-red-500 text-sm">
+                          {formik.errors.last_name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="address"
+                      className="mb-2 block text-sm font-medium text-gray-900"
+                    >
+                      Address
+                    </label>
+                    <input
+                      type="text"
+                      id="address"
+                      name="address"
+                      value={formik.values.address}
+                      onChange={formik.handleChange}
+                      className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
+                      placeholder="1st cross lane, Templers Road"
+                    />
+                    {formik.errors.address && (
+                      <p className="text-red-500 text-sm">
+                        {formik.errors.address}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="company"
+                      className="mb-2 block text-sm font-medium text-gray-900"
+                    >
+                      Company
+                    </label>
+                    <input
+                      type="text"
+                      id="company"
+                      name="company"
+                      value={formik.values.company}
+                      onChange={formik.handleChange}
+                      className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
+                      placeholder="Bonnie"
+                    />
+                    {formik.errors.company && (
+                      <p className="text-red-500 text-sm">
+                        {formik.errors.company}
+                      </p>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label
+                        htmlFor="postal_code"
+                        className="mb-2 block text-sm font-medium text-gray-900"
+                      >
+                        Postal Code
+                      </label>
+                      <input
+                        type="text"
+                        id="postal_code"
+                        name="postal_code"
+                        value={formik.values.postal_code}
+                        onChange={formik.handleChange}
+                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
+                        placeholder="10370"
+                      />
+                      {formik.errors.postal_code && (
+                        <p className="text-red-500 text-sm">
+                          {formik.errors.postal_code}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="city"
+                        className="mb-2 block text-sm font-medium text-gray-900"
+                      >
+                        City
+                      </label>
+                      <input
+                        type="text"
+                        id="city"
+                        name="city"
+                        value={formik.values.city}
+                        onChange={formik.handleChange}
+                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
+                        placeholder="Mount Lavinia"
+                      />
+                      {formik.errors.city && (
+                        <p className="text-red-500 text-sm">
+                          {formik.errors.city}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {/* <div>
+                  <label htmlFor="country">Country</label>
+                  <Select defaultValue="US">
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a country" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="US">United States</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div> */}
+
+                  <div>
+                    <label
+                      htmlFor="state"
+                      className="mb-2 block text-sm font-medium text-gray-900"
+                    >
+                      State / Province
+                    </label>
+                    <input
+                      type="text"
+                      id="state"
+                      name="state"
+                      value={formik.values.state}
+                      onChange={formik.handleChange}
+                      className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
+                      placeholder="Bonnie"
+                    />
+                    {formik.errors.state && (
+                      <p className="text-red-500 text-sm">
+                        {formik.errors.state}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={billingAddressSame}
+                      onChange={setBillingAddressSame}
+                      className="group size-5 rounded-md bg-white/10 p-1 ring-1 ring-gray/15 ring-inset data-[checked]:bg-white"
+                    >
+                      <CheckIcon className="hidden size-3 group-data-[checked]:block" />
+                    </Checkbox>
+                    <label htmlFor="billingAddress">
+                      Billing address same as shipping address
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label
+                        htmlFor="email"
+                        className="mb-2 block text-sm font-medium text-gray-900"
+                      >
+                        Email
+                      </label>
+                      <input
+                        type="text"
+                        id="email"
+                        name="email"
+                        value={formik.values.email}
+                        onChange={formik.handleChange}
+                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
+                        placeholder="Bonnie"
+                      />
+                      {formik.errors.email && (
+                        <p className="text-red-500 text-sm">
+                          {formik.errors.email}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="phone"
+                        className="mb-2 block text-sm font-medium text-gray-900"
+                      >
+                        Primary Contact Number
+                      </label>
+                      <input
+                        type="text"
+                        id="phone"
+                        name="phone"
+                        value={formik.values.phone}
+                        onChange={formik.handleChange}
+                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
+                        placeholder="Bonnie"
+                      />
+                      {formik.errors.phone && (
+                        <p className="text-red-500 text-sm">
+                          {formik.errors.phone}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    className="bg-teal text-white py-2 px-8 rounded-md hover:shadow-md transition-colors"
+                    onClick={handleValidate}
+                  >
+                    Continue to delivery
+                  </Button>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                Delivery
+                <InfoIcon className="w-4 h-4 ml-2 text-blue-500" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {currentStep !== CurrentStep.DELIVERY && (
+                <>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-semibold">Method</h3>
+                      <p>
+                        {selectedDeliveryMethod.name}{" "}
+                        <span className="text-gray-600 text-sm">
+                          ( {formatCurrency(selectedDeliveryMethod.price)} )
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    className="text-blue-500 text-sm mt-3"
+                    onClick={handleDeliveryEdit}
+                  >
+                    Edit
+                  </Button>
+                </>
+              )}
+
+              {currentStep === CurrentStep.DELIVERY && (
+                <div className="w-full">
+                  <div className="w-full">
+                    <RadioGroup
+                      value={selectedDeliveryMethod}
+                      onChange={setSelectedDeliveryMethod}
+                      aria-label="Server size"
+                      className="space-y-2"
+                    >
+                      {deliveryMethodList.map((plan) => (
+                        <Radio
+                          key={plan.id}
+                          value={plan}
+                          className="group relative flex cursor-pointer rounded-lg bg-white py-4 px-5 mb-4 text-teal shadow-md transition focus:outline-none data-[focus]:outline-1 data-[focus]:outline-teal data-[checked]:bg-ivory"
+                        >
+                          <div className="flex w-full items-center justify-between">
+                            <div className="text-sm/6">
+                              <p className="font-semibold text-teal">
+                                {plan.name}
+                              </p>
+                              <div className="flex gap-2 text-teal/50">
+                                <div>{plan.description}</div>
+                                <div aria-hidden="true">&middot;</div>
+                                <div>{formatCurrency(plan.price)}</div>
+                              </div>
+                            </div>
+                            <CheckCircleIcon
+                              className={cn(
+                                "size-5 text-teal transition",
+                                selectedDeliveryMethod.id === plan.id
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                          </div>
+                        </Radio>
+                      ))}
+                    </RadioGroup>
+                  </div>
+
+                  <Button
+                    className="bg-teal text-white my-5 py-2 px-8 rounded-md hover:shadow-md transition-colors"
+                    onClick={handleGoToPayment}
+                  >
+                    Continue to payment
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                Payment
+                <InfoIcon className="w-4 h-4 ml-2 text-blue-500" />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {currentStep !== CurrentStep.PAYMENT && (
+                <>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-semibold">Payment method</h3>
+                      <p>{selectedPaymentMethod.name}</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Payment details</h3>
+                      <p>{selectedPaymentMethod.description}</p>
+                    </div>
+                  </div>
+                  <Button
+                    className="mt-4 text-sm text-blue-500"
+                    onClick={handleGoToPayment}
+                  >
+                    Edit
+                  </Button>
+                </>
+              )}
+
+              {currentStep === CurrentStep.PAYMENT && (
+                <div className="w-full">
+                  <div className="w-full">
+                    <RadioGroup
+                      value={selectedDeliveryMethod}
+                      onChange={setSelectedDeliveryMethod}
+                      aria-label="Server size"
+                      className="space-y-2"
+                    >
+                      {paymentMethodList.map((paymentMethod) => (
+                        <Radio
+                          key={paymentMethod.id}
+                          value={paymentMethod}
+                          className="group relative flex cursor-pointer rounded-lg bg-white py-4 px-5 mb-4 text-teal shadow-md transition focus:outline-none data-[focus]:outline-1 data-[focus]:outline-teal data-[checked]:bg-ivory"
+                        >
+                          <div className="flex w-full items-center justify-between">
+                            <div className="flex items-center">
+                              <div>
+                                <img
+                                  className="w-[25px] mr-4"
+                                  src={paymentMethod.icon}
+                                />
+                              </div>
+                              <div className="text-sm/6">
+                                <p className="font-semibold text-teal">
+                                  {paymentMethod.name}
+                                </p>
+                                <div className="flex gap-2 text-teal/50">
+                                  <div>{paymentMethod.description}</div>
+                                </div>
+                              </div>
+                            </div>
+                            <CheckCircleIcon
+                              className={cn(
+                                "size-5 text-teal transition",
+                                selectedPaymentMethod.id === paymentMethod.id
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                          </div>
+                        </Radio>
+                      ))}
+                    </RadioGroup>
+                  </div>
+
+                  <Button
+                    className="bg-teal text-white my-5 py-2 px-8 rounded-md hover:shadow-md transition-colors"
+                    onClick={handleReview}
+                  >
+                    Review
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {currentStep !== CurrentStep.REVIEW && (
+            <div className="text-gray-500">Review</div>
+          )}
+
+          {currentStep === CurrentStep.REVIEW && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Review</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm/6">
+                  <p className="text-teal">
+                    By clicking the Place Order button, you confirm that you
+                    have read, understand and accept our Terms of Use, Terms of
+                    Sale and Returns Policy and acknowledge that you have read
+                    Medusa Store's Privacy Policy.
+                  </p>
+                  <Button
+                    className="flex items-center justify-center bg-teal text-white my-5 py-2 px-8 rounded-md hover:shadow-md transition-colors"
+                    onClick={handlePayAction}
+                  >
+                    {isProcessing && <Loader className="animate-spin mr-3"/>}
+                    Pay
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle>In your Cart</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>{formatCurrency(subtotal)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Shipping</span>
+                  <span>{formatCurrency(selectedDeliveryMethod.price)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Taxes</span>
+                  <span>{formatCurrency(0)}</span>
+                </div>
+                <div className="flex justify-between font-bold">
+                  <span>Total</span>
+                  <span>{calculateTotal}</span>
+                </div>
+                {items.map((item) => (
+                  <div className="border-t pt-4">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-16 h-16 bg-gray-200 rounded-md">
+                        <img
+                          src={item.imgUrl}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">{item.name}</h3>
+                        {/* <p className="text-sm text-gray-500">
+                            Variant: Height only
+                          </p> */}
+                        <div className="flex items-center space-x-2">
+                          {/* <span className="text-sm line-through text-gray-500">
+                             {formatCurrency(item.price)}
+                            </span> */}
+                          <span className="font-semibold">
+                            {formatCurrency(item.price)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-500">
+                          {item.quantity}x
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <input
+                  placeholder="Add gift card or discount code"
+                  className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
+                />
+                <Button
+                  className="w-full border border-gray-600 p-1.5 rounded hover:bg-teal hover:text-white hover:border-teal"
+                  onClick={handleDiscount}
+                >
+                  Apply
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 };

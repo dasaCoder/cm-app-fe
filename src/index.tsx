@@ -5,16 +5,18 @@ import reportWebVitals from './reportWebVitals';
 import './tailwind.css';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import { Provider } from 'react-redux';
+import { store } from './lib/store';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 root.render(
-  <React.StrictMode>
+  <Provider store={store}>
     <Header />
     <App />
     <Footer/>
-  </React.StrictMode>
+  </Provider>
 );
 
 // If you want to start measuring performance in your app, pass a function
