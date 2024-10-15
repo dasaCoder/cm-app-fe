@@ -1,4 +1,4 @@
-import { ChevronDown, User, ShoppingCart, Search } from "lucide-react";
+import { User, ShoppingCart, Search } from "lucide-react";
 import React from "react";
 import { toggleCart } from "../../lib/features/cart/cart-slice";
 import { useAppDispatch, useAppSelector } from "../../lib/hooks";

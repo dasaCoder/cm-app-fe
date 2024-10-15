@@ -1,13 +1,11 @@
 import {
-  Select,
   Checkbox,
   Button,
   RadioGroup,
-  Label,
   Radio,
 } from "@headlessui/react";
 import { CheckCircleIcon, CheckIcon, InfoIcon, Loader } from "lucide-react";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Card,
   CardHeader,
@@ -17,10 +15,10 @@ import {
 import { useFormik } from "formik";
 import checkoutFormSchema from "../../lib/validation-schemas/checkout-form";
 import { cn } from "../../utils/tailwind";
-import { formatCurrency } from "../../utils/currency";
+import { addDecimalPoints, formatCurrency } from "../../utils/currency";
 import { useAppSelector } from "../../lib/hooks";
 import { useNavigate } from "react-router-dom";
-import CheckoutSkeleton from "./loader";
+import { stringToMD5 } from "../../utils/crypto";
 
 enum CurrentStep {
   "SHIPPING_DETAILS",
@@ -33,6 +31,12 @@ enum CurrentStep {
 }
 
 const Checkout: React.FC = () => {
+  const merchantId = process.env.REACT_APP_PAYHERE_MERCHANT_ID || "";
+  const returnURl = process.env.REACT_APP_PAYHERE_RETURN_URL || "";
+  const cancelUrl = process.env.REACT_APP_PAYHERE_CANCEL_URL || "";
+  const notifyUrl = process.env.REACT_APP_PAYHERE_NOTIFY_URL || "";
+  const payhereSecret = process.env.REACT_APP_PAYHERE_SECRET_KEY || "";
+
   const { items, subtotal } = useAppSelector((state) => state.cart);
   const [billingAddressSame, setBillingAddressSame] = useState(true);
   const [currentStep, setCurrentStep] = useState<CurrentStep>(
@@ -40,8 +44,23 @@ const Checkout: React.FC = () => {
   );
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [payhereHash, setPayhereHash] = useState("");
+  const [orderId, setOrderId] = useState("");
 
-  setTimeout(()=> {
+  const generatePayhereHash = (merchantId: string, orderId: string, amount: number, secret: string) => {
+    return stringToMD5(`${merchantId}${orderId}${addDecimalPoints(amount)}LKR${stringToMD5(secret).toUpperCase()}`).toUpperCase();
+  }
+
+  useEffect(() => {
+    setOrderId(Math.floor(Math.random() * 1000000).toString());
+  }, [subtotal]);
+
+  useEffect(() => {
+    const hash = generatePayhereHash(merchantId, orderId, subtotal, payhereSecret);
+    setPayhereHash(hash);
+  },[orderId]);
+
+  setTimeout(() => {
     setIsLoading(false);
   }, 3000);
 
@@ -135,20 +154,24 @@ const Checkout: React.FC = () => {
   const handlePayAction = () => {
     setIsProcessing(true);
     console.log("Payment action");
-    console.log({...formik.values, deliveryMethod: selectedDeliveryMethod.id, paymentMethodList: selectedPaymentMethod.id});
+    console.log({
+      ...formik.values,
+      deliveryMethod: selectedDeliveryMethod.id,
+      paymentMethodList: selectedPaymentMethod.id,
+    });
     setTimeout(() => {
       setIsProcessing(false);
-      router(`/order-confirmation`);
+      const form = document.getElementById("checkoutForm") as HTMLFormElement;
+      if (form) {
+        form.submit();
+      }
     }, 2000);
-    
-  }
+  };
 
-  const calculateTotal = useMemo(() => {
-    return formatCurrency(subtotal + selectedDeliveryMethod.price);
-  }, [subtotal, selectedDeliveryMethod]);
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    // e.preventDefault();
 
-  if(isLoading) {
-    return <CheckoutSkeleton />
+    // handlePayAction();
   }
 
   return (
@@ -596,6 +619,29 @@ const Checkout: React.FC = () => {
             </CardContent>
           </Card>
 
+          <form
+            id="checkoutForm"
+            method="POST"
+            action="https://sandbox.payhere.lk/pay/checkout"
+          >
+            <input type="hidden" name="merchant_id" value={merchantId} />
+            <input type="hidden" name="return_url" value={returnURl} />
+            <input type="hidden" name="cancel_url" value={cancelUrl} />
+            <input type="hidden" name="notify_url" value={notifyUrl} />
+            <input type="hidden" name="order_id" value={orderId} />
+            <input type="hidden" name="items" value="Cart items" />
+            <input type="hidden" name="currency" value="LKR" />
+            <input type="hidden" name="amount" value={subtotal} />
+            <input type="hidden" name="hash" value={payhereHash} />
+            <input type="hidden" name="first_name" value={formik.values.first_name} />
+            <input type="hidden" name="last_name" value={formik.values.last_name} />
+            <input type="hidden" name="email" value={formik.values.email} />
+            <input type="hidden" name="phone" value={formik.values.phone} />
+            <input type="hidden" name="address" value={formik.values.address} />
+            <input type="hidden" name="city" value={formik.values.city} />
+            <input type="hidden" name="country" value="Sri Lanka" />
+          </form>
+
           {currentStep !== CurrentStep.REVIEW && (
             <div className="text-gray-500">Review</div>
           )}
@@ -617,7 +663,7 @@ const Checkout: React.FC = () => {
                     className="flex items-center justify-center bg-teal text-white my-5 py-2 px-8 rounded-md hover:shadow-md transition-colors"
                     onClick={handlePayAction}
                   >
-                    {isProcessing && <Loader className="animate-spin mr-3"/>}
+                    {isProcessing && <Loader className="animate-spin mr-3" />}
                     Pay
                   </Button>
                 </div>
@@ -647,7 +693,7 @@ const Checkout: React.FC = () => {
                 </div>
                 <div className="flex justify-between font-bold">
                   <span>Total</span>
-                  <span>{calculateTotal}</span>
+                  <span>{formatCurrency(subtotal)}</span>
                 </div>
                 {items.map((item) => (
                   <div className="border-t pt-4">

@@ -1,4 +1,3 @@
-import { Search, User, ShoppingCart, ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import ItemCarousel from "../../components/ItemCarousel";
 import { Item } from "../../types/item";
