@@ -6,11 +6,12 @@ export default function Home() {
   const [items, setItems] = useState<Item[]>([]);
 
   useEffect(() => {
-    fetch(`${process.env.REACT_APP_BACKEND_HOST}/item`)
+    fetch(`${process.env.REACT_APP_BACKEND_HOST}/items`)
       .then((res) => res.json())
-      .then((data) => {
-        if (data.length > 0) {
-          setItems(data);
+      .then((res) => {
+        console.log(res.data);
+        if (res.data.length > 0) {
+          setItems(res.data);
         }
       });
   }, []);

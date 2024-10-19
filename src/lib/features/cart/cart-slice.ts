@@ -6,7 +6,7 @@ export interface CartItem {
     quantity: number
     name: string
     price: number
-    imgUrl: string
+    imageurl: string
 }
 export interface CartState {
     items: CartItem[],

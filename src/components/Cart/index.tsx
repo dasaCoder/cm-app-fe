@@ -71,10 +71,18 @@ export function Cart() {
                   <p className="mt-0.5 text-sm text-gray-500">Shipping and taxes calculated at checkout.</p>
                   <div className="mt-6">
                     <a
-                      href="/checkout"
+                      href="/cart"
                       className="flex items-center justify-center rounded-md border border-transparent bg-teal px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-teal"
                     >
-                      Go To Cart
+                      View Cart
+                    </a>
+                  </div>
+                  <div className="mt-6">
+                    <a
+                      href="/checkout"
+                      className="flex items-center justify-center rounded-md border border-transparent bg-blue-500 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-teal"
+                    >
+                      Checkout Now
                     </a>
                   </div>
                   <div className="mt-6 flex justify-center text-center text-sm text-gray-500">

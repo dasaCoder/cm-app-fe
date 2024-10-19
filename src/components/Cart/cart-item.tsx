@@ -17,8 +17,8 @@ const CartItemPlaceholder: React.FC<CartItemProps> = ({ cartItem, onRemove }) =>
         <li key={cartItem.id} className="flex py-6">
             <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border border-gray-200">
                 <img
-                    alt={cartItem.imgUrl}
-                    src={cartItem.imgUrl}
+                    alt={cartItem.imageurl}
+                    src={cartItem.imageurl}
                     className="h-full w-full object-cover object-center"
                 />
             </div>

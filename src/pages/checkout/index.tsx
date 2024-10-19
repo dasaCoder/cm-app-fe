@@ -3,8 +3,17 @@ import {
   Button,
   RadioGroup,
   Radio,
+  Select,
+  Textarea,
 } from "@headlessui/react";
-import { CheckCircleIcon, CheckIcon, InfoIcon, Loader } from "lucide-react";
+import {
+  Car,
+  CheckCircleIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  InfoIcon,
+  Loader,
+} from "lucide-react";
 import React, { useEffect, useState } from "react";
 import {
   Card,
@@ -19,9 +28,10 @@ import { addDecimalPoints, formatCurrency } from "../../utils/currency";
 import { useAppSelector } from "../../lib/hooks";
 import { useNavigate } from "react-router-dom";
 import { stringToMD5 } from "../../utils/crypto";
+import { send } from "process";
 
 enum CurrentStep {
-  "SHIPPING_DETAILS",
+  "DELIVERY_DETAILS",
   "DELIVERY_ADDRESS",
   "DELIVERY",
   "PAYMENT",
@@ -38,27 +48,40 @@ const Checkout: React.FC = () => {
   const payhereSecret = process.env.REACT_APP_PAYHERE_SECRET_KEY || "";
 
   const { items, subtotal } = useAppSelector((state) => state.cart);
-  const [billingAddressSame, setBillingAddressSame] = useState(true);
   const [currentStep, setCurrentStep] = useState<CurrentStep>(
-    CurrentStep.REVIEW
+    CurrentStep.DELIVERY_DETAILS
   );
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [payhereHash, setPayhereHash] = useState("");
   const [orderId, setOrderId] = useState("");
 
-  const generatePayhereHash = (merchantId: string, orderId: string, amount: number, secret: string) => {
-    return stringToMD5(`${merchantId}${orderId}${addDecimalPoints(amount)}LKR${stringToMD5(secret).toUpperCase()}`).toUpperCase();
-  }
+  const generatePayhereHash = (
+    merchantId: string,
+    orderId: string,
+    amount: number,
+    secret: string
+  ) => {
+    return stringToMD5(
+      `${merchantId}${orderId}${addDecimalPoints(amount)}LKR${stringToMD5(
+        secret
+      ).toUpperCase()}`
+    ).toUpperCase();
+  };
 
   useEffect(() => {
     setOrderId(Math.floor(Math.random() * 1000000).toString());
   }, [subtotal]);
 
   useEffect(() => {
-    const hash = generatePayhereHash(merchantId, orderId, subtotal, payhereSecret);
+    const hash = generatePayhereHash(
+      merchantId,
+      orderId,
+      subtotal,
+      payhereSecret
+    );
     setPayhereHash(hash);
-  },[orderId]);
+  }, [orderId]);
 
   setTimeout(() => {
     setIsLoading(false);
@@ -115,13 +138,17 @@ const Checkout: React.FC = () => {
       first_name: "",
       last_name: "",
       address: "",
-      company: "",
-      postal_code: "",
       city: "",
       state: "",
-      email: "",
       phone: "",
       deliveryMethod: "1",
+      locationType: "Home",
+      deliveryDate: "",
+      sendersName: "",
+      sendersPhone: "",
+      sendersEmail: "",
+      specialMsg: "",
+      deliveryInstructions: "",
     },
     onSubmit: (values) => {
       console.log(values);
@@ -131,7 +158,12 @@ const Checkout: React.FC = () => {
   const handleValidate = async () => {
     const errors = await formik.validateForm();
     if (Object.keys(errors).length === 0) {
-      setCurrentStep(CurrentStep.DELIVERY);
+    setIsProcessing(true);
+
+      setTimeout(() => {
+        setCurrentStep(CurrentStep.DELIVERY);
+        setIsProcessing(false);
+      }, 3000);
     }
   };
 
@@ -163,16 +195,15 @@ const Checkout: React.FC = () => {
       setIsProcessing(false);
       const form = document.getElementById("checkoutForm") as HTMLFormElement;
       if (form) {
-        form.submit();
+        // form.submit();
       }
     }, 2000);
   };
 
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     // e.preventDefault();
-
     // handlePayAction();
-  }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 animate-">
@@ -180,44 +211,40 @@ const Checkout: React.FC = () => {
         <div className="md:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Shipping Address</CardTitle>
+              <CardTitle>Delivery Details</CardTitle>
             </CardHeader>
             <CardContent>
-              {currentStep !== CurrentStep.SHIPPING_DETAILS && (
+              {currentStep !== CurrentStep.DELIVERY_DETAILS && (
                 <>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <h3 className="font-semibold">Shipping Address</h3>
+                      <h3 className="font-semibold">Delivery Address</h3>
                       <p>{formik.values.address}</p>
                       <p>{formik.values.city}</p>
-                      <p>{`${formik.values.postal_code}, ${formik.values.state}`}</p>
+                      <p>{`${formik.values.state}`}</p>
                     </div>
                     <div>
                       <h3 className="font-semibold">Contact</h3>
-                      <p>{`${formik.values.phone}, ${formik.values.email}`}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <h3 className="font-semibold">Billing Address</h3>
-                      <p>Billing and delivery address are the same.</p>
+                      <p>{`${formik.values.sendersEmail}, ${formik.values.sendersPhone}`}</p>
                     </div>
                   </div>
                   <Button
                     className="text-blue-500 text-sm mt-3"
-                    onClick={() => setCurrentStep(CurrentStep.SHIPPING_DETAILS)}
+                    onClick={() => setCurrentStep(CurrentStep.DELIVERY_DETAILS)}
                   >
                     Edit
                   </Button>
                 </>
               )}
-              {currentStep === CurrentStep.SHIPPING_DETAILS && (
-                <form className="space-y-4">
+              {currentStep === CurrentStep.DELIVERY_DETAILS && (
+                <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label
                         htmlFor="firstName"
                         className="mb-2 block text-sm font-medium text-gray-900"
                       >
-                        First name
+                        Recipient's first name
                       </label>
                       <input
                         type="text"
@@ -226,7 +253,7 @@ const Checkout: React.FC = () => {
                         value={formik.values.first_name}
                         onChange={formik.handleChange}
                         className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                        placeholder="Bonnie"
+                        placeholder="Max"
                       />
                       {formik.errors.first_name && (
                         <p className="text-red-500 text-sm">
@@ -239,7 +266,7 @@ const Checkout: React.FC = () => {
                         htmlFor="lastName"
                         className="mb-2 block text-sm font-medium text-gray-900"
                       >
-                        Last name
+                        Recipient's last name
                       </label>
                       <input
                         type="text"
@@ -248,7 +275,7 @@ const Checkout: React.FC = () => {
                         value={formik.values.last_name}
                         onChange={formik.handleChange}
                         className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                        placeholder="Bonnie"
+                        placeholder="Dasanayaka"
                       />
                       {formik.errors.last_name && (
                         <p className="text-red-500 text-sm">
@@ -256,18 +283,65 @@ const Checkout: React.FC = () => {
                         </p>
                       )}
                     </div>
+
+                    <div>
+                      <label
+                        htmlFor="phone"
+                        className="mb-2 block text-sm font-medium text-gray-900"
+                      >
+                        Recipient's contact number
+                      </label>
+                      <input
+                        type="text"
+                        id="phone"
+                        name="phone"
+                        value={formik.values.phone}
+                        onChange={formik.handleChange}
+                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
+                        placeholder="0713252XXX"
+                      />
+                      {formik.errors.phone && (
+                        <p className="text-red-500 text-sm">
+                          {formik.errors.phone}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="deliveryDate"
+                        className="mb-2 block text-sm font-medium text-gray-900"
+                      >
+                        Delivery Date
+                      </label>
+                      <input
+                        type="text"
+                        id="deliveryDate"
+                        name="deliveryDate"
+                        value={formik.values.deliveryDate}
+                        onChange={formik.handleChange}
+                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
+                        placeholder="0713252XXX"
+                      />
+                      {formik.errors.deliveryDate && (
+                        <p className="text-red-500 text-sm">
+                          {formik.errors.deliveryDate}
+                        </p>
+                      )}
+                    </div>
+                    
                   </div>
                   <div>
                     <label
                       htmlFor="address"
                       className="mb-2 block text-sm font-medium text-gray-900"
                     >
-                      Address
+                      Delivery address
                     </label>
-                    <input
-                      type="text"
+                    <Textarea
                       id="address"
                       name="address"
+                      rows={2}
                       value={formik.values.address}
                       onChange={formik.handleChange}
                       className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
@@ -279,111 +353,72 @@ const Checkout: React.FC = () => {
                       </p>
                     )}
                   </div>
-                  <div>
-                    <label
-                      htmlFor="company"
-                      className="mb-2 block text-sm font-medium text-gray-900"
-                    >
-                      Company
-                    </label>
-                    <input
-                      type="text"
-                      id="company"
-                      name="company"
-                      value={formik.values.company}
-                      onChange={formik.handleChange}
-                      className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                      placeholder="Bonnie"
-                    />
-                    {formik.errors.company && (
-                      <p className="text-red-500 text-sm">
-                        {formik.errors.company}
-                      </p>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label
-                        htmlFor="postal_code"
-                        className="mb-2 block text-sm font-medium text-gray-900"
-                      >
-                        Postal Code
-                      </label>
-                      <input
-                        type="text"
-                        id="postal_code"
-                        name="postal_code"
-                        value={formik.values.postal_code}
-                        onChange={formik.handleChange}
-                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                        placeholder="10370"
-                      />
-                      {formik.errors.postal_code && (
-                        <p className="text-red-500 text-sm">
-                          {formik.errors.postal_code}
-                        </p>
-                      )}
-                    </div>
 
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label
                         htmlFor="city"
                         className="mb-2 block text-sm font-medium text-gray-900"
                       >
-                        City
+                        Delivery city
                       </label>
-                      <input
-                        type="text"
-                        id="city"
-                        name="city"
-                        value={formik.values.city}
-                        onChange={formik.handleChange}
-                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                        placeholder="Mount Lavinia"
-                      />
+                      <div className="relative">
+                        <Select
+                          name="city"
+                          value={formik.values.city}
+                          onChange={formik.handleChange}
+                          className="appearance-none block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+                        >
+                          <option value=""></option>
+                          <option value="colombo1">Colombo 1</option>
+                          <option value="dehiwala">Dehiwala</option>
+                          <option value="mtlavinia">Mount Lavinia</option>
+                        </Select>
+                        <ChevronDownIcon
+                          className="group pointer-events-none absolute top-2.5 right-2.5 size-5 fill-white/60"
+                          aria-hidden="true"
+                        />
+                      </div>
                       {formik.errors.city && (
                         <p className="text-red-500 text-sm">
                           {formik.errors.city}
                         </p>
                       )}
                     </div>
-                  </div>
-                  {/* <div>
-                  <label htmlFor="country">Country</label>
-                  <Select defaultValue="US">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a country" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="US">United States</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div> */}
 
-                  <div>
-                    <label
-                      htmlFor="state"
-                      className="mb-2 block text-sm font-medium text-gray-900"
-                    >
-                      State / Province
-                    </label>
-                    <input
-                      type="text"
-                      id="state"
-                      name="state"
-                      value={formik.values.state}
-                      onChange={formik.handleChange}
-                      className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                      placeholder="Bonnie"
-                    />
-                    {formik.errors.state && (
-                      <p className="text-red-500 text-sm">
-                        {formik.errors.state}
-                      </p>
-                    )}
+                    <div>
+                      <label
+                        htmlFor="locationType"
+                        className="mb-2 block text-sm font-medium text-gray-900"
+                      >
+                        Delivery location type
+                      </label>
+                      <div className="relative">
+                        <Select
+                          name="locationType"
+                          value={formik.values.locationType}
+                          onChange={formik.handleChange}
+                          className="appearance-none block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+                        >
+                          <option value="Home">Home</option>
+                          <option value="Office">Office</option>
+                        </Select>
+                        <ChevronDownIcon
+                          className="group pointer-events-none absolute top-2.5 right-2.5 size-5 fill-white/60"
+                          aria-hidden="true"
+                        />
+                      </div>
+                      {formik.errors.locationType && (
+                        <p className="text-red-500 text-sm">
+                          {formik.errors.locationType}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  <div className="grid grid-cols-2 gap-4"></div>
+
+                  {/* <div className="flex items-center space-x-2">
                     <Checkbox
                       checked={billingAddressSame}
                       onChange={setBillingAddressSame}
@@ -392,29 +427,62 @@ const Checkout: React.FC = () => {
                       <CheckIcon className="hidden size-3 group-data-[checked]:block" />
                     </Checkbox>
                     <label htmlFor="billingAddress">
-                      Billing address same as shipping address
+                      Billing address same as Delivery address
                     </label>
-                  </div>
+                  </div> */}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          {currentStep === CurrentStep.DELIVERY_DETAILS && (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Sender's Details</CardTitle>
+                </CardHeader>
+                <CardContent>
                   <div className="grid grid-cols-2 gap-4">
+                  <div>
+                      <label
+                        htmlFor="email"
+                        className="mb-2 block text-sm font-medium text-gray-900"
+                      >
+                        Sender's name
+                      </label>
+                      <input
+                        type="text"
+                        id="sendersName"
+                        name="sendersName"
+                        value={formik.values.sendersName}
+                        onChange={formik.handleChange}
+                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
+                        placeholder="Jessy"
+                      />
+                      {formik.errors.sendersName && (
+                        <p className="text-red-500 text-sm">
+                          {formik.errors.sendersName}
+                        </p>
+                      )}
+                    </div>
                     <div>
                       <label
                         htmlFor="email"
                         className="mb-2 block text-sm font-medium text-gray-900"
                       >
-                        Email
+                        Sender's email
                       </label>
                       <input
                         type="text"
-                        id="email"
-                        name="email"
-                        value={formik.values.email}
+                        id="sendersEmail"
+                        name="sendersEmail"
+                        value={formik.values.sendersEmail}
                         onChange={formik.handleChange}
                         className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                        placeholder="Bonnie"
+                        placeholder="jessy123@gmail.com"
                       />
-                      {formik.errors.email && (
+                      {formik.errors.sendersEmail && (
                         <p className="text-red-500 text-sm">
-                          {formik.errors.email}
+                          {formik.errors.sendersEmail}
                         </p>
                       )}
                     </div>
@@ -423,34 +491,75 @@ const Checkout: React.FC = () => {
                         htmlFor="phone"
                         className="mb-2 block text-sm font-medium text-gray-900"
                       >
-                        Primary Contact Number
+                        Sender's contact number
                       </label>
                       <input
                         type="text"
-                        id="phone"
-                        name="phone"
-                        value={formik.values.phone}
+                        id="sendersPhone"
+                        name="sendersPhone"
+                        value={formik.values.sendersPhone}
                         onChange={formik.handleChange}
                         className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                        placeholder="Bonnie"
+                        placeholder="0773252XXX"
                       />
-                      {formik.errors.phone && (
+                      {formik.errors.sendersPhone && (
                         <p className="text-red-500 text-sm">
-                          {formik.errors.phone}
+                          {formik.errors.sendersPhone}
                         </p>
                       )}
                     </div>
                   </div>
+
+                  <div>
+                    <label
+                      htmlFor="specialMsg"
+                      className="mb-2 block text-sm font-medium text-gray-900 mt-2"
+                    >
+                      Special Message
+                    </label>
+                    <Textarea
+                      id="specialMsg"
+                      name="specialMsg"
+                      value={formik.values.specialMsg}
+                      onChange={formik.handleChange}
+                      className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
+                      placeholder="Happy birthday my love"
+                      rows={3}
+                    />
+                    {formik.errors.specialMsg && (
+                      <p className="text-red-500 text-sm">
+                        {formik.errors.specialMsg}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent>
+                  <div className="text-sm pt-5 pb-3">
+                    <p>
+                      By clicking the Continue to delivery button, you confirm
+                      that you have read, understand and accept our Terms of
+                      Use, Terms of Sale and Returns Policy and acknowledge that
+                      you have read Medusa Store's Privacy Policy.{" "} {JSON.stringify(formik.errors)}
+                      <a href="#" className="text-blue-500 hover:underline">
+                        Privacy & policy
+                      </a>
+                    </p>
+                  </div>
                   <Button
-                    className="bg-teal text-white py-2 px-8 rounded-md hover:shadow-md transition-colors"
+                    className="flex items-center justify-center bg-teal text-white py-2 px-8 rounded-md hover:shadow-md transition-colors disabled:bg-gray-300"
                     onClick={handleValidate}
+                    disabled={formik.dirty && formik.isValid ? false : true}
                   >
+                    {isProcessing && <Loader className="animate-spin mr-3" />}
                     Continue to delivery
                   </Button>
-                </form>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </>
+          )}
 
           <Card>
             <CardHeader>
@@ -633,10 +742,26 @@ const Checkout: React.FC = () => {
             <input type="hidden" name="currency" value="LKR" />
             <input type="hidden" name="amount" value={subtotal} />
             <input type="hidden" name="hash" value={payhereHash} />
-            <input type="hidden" name="first_name" value={formik.values.first_name} />
-            <input type="hidden" name="last_name" value={formik.values.last_name} />
-            <input type="hidden" name="email" value={formik.values.email} />
-            <input type="hidden" name="phone" value={formik.values.phone} />
+            <input
+              type="hidden"
+              name="first_name"
+              value={formik.values.first_name}
+            />
+            <input
+              type="hidden"
+              name="last_name"
+              value={formik.values.last_name}
+            />
+            <input
+              type="hidden"
+              name="email"
+              value={formik.values.sendersEmail}
+            />
+            <input
+              type="hidden"
+              name="phone"
+              value={formik.values.sendersPhone}
+            />
             <input type="hidden" name="address" value={formik.values.address} />
             <input type="hidden" name="city" value={formik.values.city} />
             <input type="hidden" name="country" value="Sri Lanka" />
@@ -657,7 +782,7 @@ const Checkout: React.FC = () => {
                     By clicking the Place Order button, you confirm that you
                     have read, understand and accept our Terms of Use, Terms of
                     Sale and Returns Policy and acknowledge that you have read
-                    Medusa Store's Privacy Policy.
+                    Max Store's Privacy Policy.
                   </p>
                   <Button
                     className="flex items-center justify-center bg-teal text-white my-5 py-2 px-8 rounded-md hover:shadow-md transition-colors"
@@ -684,7 +809,7 @@ const Checkout: React.FC = () => {
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Shipping</span>
+                  <span>Delivery Fee</span>
                   <span>{formatCurrency(selectedDeliveryMethod.price)}</span>
                 </div>
                 <div className="flex justify-between">
@@ -700,7 +825,7 @@ const Checkout: React.FC = () => {
                     <div className="flex items-center space-x-4">
                       <div className="w-16 h-16 bg-gray-200 rounded-md">
                         <img
-                          src={item.imgUrl}
+                          src={item.imageurl}
                           alt={item.name}
                           className="w-full h-full object-cover"
                         />

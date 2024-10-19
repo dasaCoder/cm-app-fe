@@ -19,21 +19,25 @@ const ItemComponent: React.FC = () => {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    fetch(`${process.env.REACT_APP_BACKEND_HOST}/item/${id}`)
+    fetch(`${process.env.REACT_APP_BACKEND_HOST}/items/${id}`)
       .then((response) => response.json())
-      .then((data) => {
-        setItem(data);
+      .then((res) => {
+        if (res.data.length > 0) {
+          setItem(res.data[0]);
+        } else {
+          alert("Item not found");
+        }
       });
 
-    fetch(`${process.env.REACT_APP_BACKEND_HOST}/item`)
+    fetch(`${process.env.REACT_APP_BACKEND_HOST}/items`)
       .then((response) => response.json())
-      .then((data) => {
-        setSuggestedItems(data);
+      .then((res) => {
+        setSuggestedItems(res.data);
       });
   }, [id]);
 
   const handleAddToCart = () => {
-    item && dispatch(addItem({ ...item, id: item?._id, quantity: 1 }));
+    item && dispatch(addItem({ ...item, id: item?.id, quantity: 1 }));
   };
 
   const paintItem = (item: Item) => {
@@ -41,8 +45,8 @@ const ItemComponent: React.FC = () => {
       <div className="container grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="bg-gray-100 rounded-lg overflow-hidden">
           <img
-            src={item.imgUrl}
-            alt="Horizon Gaze Sunglasses"
+            src={item.imageurl}
+            alt={item.name}
             className="w-full bg-ivory h-full object-cover"
           />
         </div>

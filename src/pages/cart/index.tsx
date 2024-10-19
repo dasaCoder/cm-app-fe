@@ -38,7 +38,7 @@ const Cart: React.FC = () => {
                       <td className="py-4">
                         <div className="flex items-center space-x-4">
                           <img
-                            src={item.imgUrl}
+                            src={item.imageurl}
                             alt="Corporate Commando Throne"
                             width={80}
                             height={80}

@@ -4,31 +4,31 @@ import { useNavigate } from "react-router-dom";
 import { formatCurrency } from "../../utils/currency";
 
 interface ItemProps {
-  _id: string;
+  id: string;
   name: string;
   price: number;
-  imgUrl: string;
+  imageurl: string;
   discount?: number;
 }
 
 const Item: React.FC<ItemProps> = ({
-  _id,
+  id,
   name,
   price,
-  imgUrl,
+  imageurl,
   discount = 5,
 }) => {
   const router = useNavigate();
 
   const handleAddToCart = (id: string) => {
-    router({ pathname: `/item/${_id}` });
+    router({ pathname: `/item/${id}` });
   };
 
   return (
     <div className="bg-ivory rounded-lg shadow-md overflow-hidden m-1">
       <div className="relative group">
         <img
-          src={imgUrl}
+          src={imageurl}
           alt={name}
           className="w-full object-cover transform transition-transform duration-500 ease-out group-hover:scale-105 group-hover:rotate-2 group-hover:translate-y-1"
         />
@@ -58,7 +58,7 @@ const Item: React.FC<ItemProps> = ({
 
           <button
             className="px-2 py-1 rounded-md"
-            onClick={() => handleAddToCart(_id)}
+            onClick={() => handleAddToCart(id)}
           >
             <ShoppingCart className="text-teal" size={24} />
           </button>
