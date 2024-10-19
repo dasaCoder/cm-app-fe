@@ -1,20 +1,10 @@
 import { useEffect, useState } from "react";
 import ItemCarousel from "../../components/ItemCarousel";
 import { Item } from "../../types/item";
+import useFetch from "../../lib/hooks/http/useFetch";
 
 export default function Home() {
-  const [items, setItems] = useState<Item[]>([]);
-
-  useEffect(() => {
-    fetch(`${process.env.REACT_APP_BACKEND_HOST}/items`)
-      .then((res) => res.json())
-      .then((res) => {
-        console.log(res.data);
-        if (res.data.length > 0) {
-          setItems(res.data);
-        }
-      });
-  }, []);
+  const {data, loading, error} = useFetch<Item[]>("items");
 
   return (
     <div>
@@ -47,7 +37,7 @@ export default function Home() {
           Our plants are sure to brighten up your home (and your future).
         </p>
 
-        <ItemCarousel items={items} />
+        {data && <ItemCarousel items={data} />}
       </div>
     </div>
   );

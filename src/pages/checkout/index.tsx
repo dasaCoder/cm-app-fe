@@ -29,6 +29,7 @@ import { useAppSelector } from "../../lib/hooks";
 import { useNavigate } from "react-router-dom";
 import { stringToMD5 } from "../../utils/crypto";
 import { send } from "process";
+import TextInput from "../../components/input/Input";
 
 enum CurrentStep {
   "DELIVERY_DETAILS",
@@ -158,7 +159,7 @@ const Checkout: React.FC = () => {
   const handleValidate = async () => {
     const errors = await formik.validateForm();
     if (Object.keys(errors).length === 0) {
-    setIsProcessing(true);
+      setIsProcessing(true);
 
       setTimeout(() => {
         setCurrentStep(CurrentStep.DELIVERY);
@@ -184,8 +185,8 @@ const Checkout: React.FC = () => {
   };
 
   const handlePayAction = () => {
-    setIsProcessing(true);
     console.log("Payment action");
+    setIsProcessing(true);
     console.log({
       ...formik.values,
       deliveryMethod: selectedDeliveryMethod.id,
@@ -239,50 +240,19 @@ const Checkout: React.FC = () => {
               {currentStep === CurrentStep.DELIVERY_DETAILS && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label
-                        htmlFor="firstName"
-                        className="mb-2 block text-sm font-medium text-gray-900"
-                      >
-                        Recipient's first name
-                      </label>
-                      <input
-                        type="text"
-                        id="firstName"
-                        name="first_name"
-                        value={formik.values.first_name}
-                        onChange={formik.handleChange}
-                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                        placeholder="Max"
-                      />
-                      {formik.errors.first_name && (
-                        <p className="text-red-500 text-sm">
-                          {formik.errors.first_name}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="lastName"
-                        className="mb-2 block text-sm font-medium text-gray-900"
-                      >
-                        Recipient's last name
-                      </label>
-                      <input
-                        type="text"
-                        id="lastName"
-                        name="last_name"
-                        value={formik.values.last_name}
-                        onChange={formik.handleChange}
-                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                        placeholder="Dasanayaka"
-                      />
-                      {formik.errors.last_name && (
-                        <p className="text-red-500 text-sm">
-                          {formik.errors.last_name}
-                        </p>
-                      )}
-                    </div>
+                    <TextInput
+                      label="Recipient's first name"
+                      placeholder="Max"
+                      field={formik.getFieldProps("first_name")}
+                      meta={formik.getFieldMeta("first_name")}
+                    />
+
+                    <TextInput
+                      label="Recipient's last name"
+                      placeholder="Dasanayaka"
+                      field={formik.getFieldProps("last_name")}
+                      meta={formik.getFieldMeta("last_name")}
+                    />
 
                     <div>
                       <label
@@ -329,7 +299,6 @@ const Checkout: React.FC = () => {
                         </p>
                       )}
                     </div>
-                    
                   </div>
                   <div>
                     <label
@@ -442,7 +411,7 @@ const Checkout: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
-                  <div>
+                    <div>
                       <label
                         htmlFor="email"
                         className="mb-2 block text-sm font-medium text-gray-900"
@@ -542,7 +511,8 @@ const Checkout: React.FC = () => {
                       By clicking the Continue to delivery button, you confirm
                       that you have read, understand and accept our Terms of
                       Use, Terms of Sale and Returns Policy and acknowledge that
-                      you have read Medusa Store's Privacy Policy.{" "} {JSON.stringify(formik.errors)}
+                      you have read Medusa Store's Privacy Policy.{" "}
+                      {JSON.stringify(formik.errors)}
                       <a href="#" className="text-blue-500 hover:underline">
                         Privacy & policy
                       </a>

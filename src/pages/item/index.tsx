@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useParams } from "react-router-dom";
 import { Item } from "../../types/item";
 import { ChevronRight } from "lucide-react";
@@ -6,6 +6,7 @@ import { formatCurrency } from "../../utils/currency";
 import { useAppDispatch } from "../../lib/hooks";
 import { addItem } from "../../lib/features/cart/cart-slice";
 import ItemCarousel from "../../components/ItemCarousel";
+import useFetch from "../../lib/hooks/http/useFetch";
 
 type ItemParams = {
   id: string;
@@ -13,28 +14,11 @@ type ItemParams = {
 
 const ItemComponent: React.FC = () => {
   const { id } = useParams<ItemParams>();
-  const [item, setItem] = useState<Item>();
-  const [suggestedItems, setSuggestedItems] = useState<Item[]>([]);
+
+  const {data: item, loading, error} = useFetch<Item>(`items/${id}`);
+  const {data: suggestedItems, loading: isSuggestedItemsLoading, error: suggestedItemsError} = useFetch<Item[]>(`items`);
 
   const dispatch = useAppDispatch();
-
-  useEffect(() => {
-    fetch(`${process.env.REACT_APP_BACKEND_HOST}/items/${id}`)
-      .then((response) => response.json())
-      .then((res) => {
-        if (res.data.length > 0) {
-          setItem(res.data[0]);
-        } else {
-          alert("Item not found");
-        }
-      });
-
-    fetch(`${process.env.REACT_APP_BACKEND_HOST}/items`)
-      .then((response) => response.json())
-      .then((res) => {
-        setSuggestedItems(res.data);
-      });
-  }, [id]);
 
   const handleAddToCart = () => {
     item && dispatch(addItem({ ...item, id: item?.id, quantity: 1 }));
@@ -93,7 +77,7 @@ const ItemComponent: React.FC = () => {
       {item ? paintItem(item) : paintItemLoading()}
 
       <h2 className="text-2xl font-bold mt-8 mb-4">Suggested items</h2>
-      <ItemCarousel items={suggestedItems} />
+      {suggestedItems && <ItemCarousel items={suggestedItems} />}
     </div>
   );
 };
