@@ -1,15 +1,11 @@
 import {
-  Checkbox,
   Button,
   RadioGroup,
   Radio,
   Select,
-  Textarea,
 } from "@headlessui/react";
 import {
-  Car,
   CheckCircleIcon,
-  CheckIcon,
   ChevronDownIcon,
   InfoIcon,
   Loader,
@@ -28,8 +24,10 @@ import { addDecimalPoints, formatCurrency } from "../../utils/currency";
 import { useAppSelector } from "../../lib/hooks";
 import { useNavigate } from "react-router-dom";
 import { stringToMD5 } from "../../utils/crypto";
-import { send } from "process";
 import TextInput from "../../components/input/Input";
+import CartInfo from "./CartSummary";
+import TextAreaInput from "../../components/input/text-area";
+import usePost from "../../lib/hooks/http/usePost";
 
 enum CurrentStep {
   "DELIVERY_DETAILS",
@@ -56,6 +54,11 @@ const Checkout: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [payhereHash, setPayhereHash] = useState("");
   const [orderId, setOrderId] = useState("");
+  const { sendRequest: sendPlaceOrderRequest, loading, data: placeOrderResponse } = usePost<{data: {id: string}}>("orders", {});
+
+  const randomUUID = () => {
+    return `${new Date().getTime()}`;
+  }
 
   const generatePayhereHash = (
     merchantId: string,
@@ -69,10 +72,6 @@ const Checkout: React.FC = () => {
       ).toUpperCase()}`
     ).toUpperCase();
   };
-
-  useEffect(() => {
-    setOrderId(Math.floor(Math.random() * 1000000).toString());
-  }, [subtotal]);
 
   useEffect(() => {
     const hash = generatePayhereHash(
@@ -192,18 +191,36 @@ const Checkout: React.FC = () => {
       deliveryMethod: selectedDeliveryMethod.id,
       paymentMethodList: selectedPaymentMethod.id,
     });
-    setTimeout(() => {
-      setIsProcessing(false);
-      const form = document.getElementById("checkoutForm") as HTMLFormElement;
-      if (form) {
-        // form.submit();
-      }
-    }, 2000);
-  };
+    setTimeout(async () => {
 
-  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    // e.preventDefault();
-    // handlePayAction();
+      await sendPlaceOrderRequest({
+        guest_email: formik.values.sendersEmail,
+        delivery_city: formik.values.city,
+        delivery_address: formik.values.address,
+        delivery_fee: selectedDeliveryMethod.price,
+        handling_fee: 0,
+        tax: 0,
+        discounted_amount: 0,
+        total_price: subtotal + selectedDeliveryMethod.price,
+        items: items.map((item) => ({
+          item_id: item.id,
+          quantity: item.quantity,
+          variant: "sm",
+          price: item.price,
+        })),
+      });
+
+      if (placeOrderResponse) {
+        setOrderId(placeOrderResponse.data.id);
+        const form = document.getElementById("checkoutForm") as HTMLFormElement;
+        if (form) {
+          form.submit();
+        }
+      } else {
+        alert("Something went wrong");
+      }
+      setIsProcessing(false);
+    }, 2000);
   };
 
   return (
@@ -253,75 +270,25 @@ const Checkout: React.FC = () => {
                       field={formik.getFieldProps("last_name")}
                       meta={formik.getFieldMeta("last_name")}
                     />
-
-                    <div>
-                      <label
-                        htmlFor="phone"
-                        className="mb-2 block text-sm font-medium text-gray-900"
-                      >
-                        Recipient's contact number
-                      </label>
-                      <input
-                        type="text"
-                        id="phone"
-                        name="phone"
-                        value={formik.values.phone}
-                        onChange={formik.handleChange}
-                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                        placeholder="0713252XXX"
-                      />
-                      {formik.errors.phone && (
-                        <p className="text-red-500 text-sm">
-                          {formik.errors.phone}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="deliveryDate"
-                        className="mb-2 block text-sm font-medium text-gray-900"
-                      >
-                        Delivery Date
-                      </label>
-                      <input
-                        type="text"
-                        id="deliveryDate"
-                        name="deliveryDate"
-                        value={formik.values.deliveryDate}
-                        onChange={formik.handleChange}
-                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                        placeholder="0713252XXX"
-                      />
-                      {formik.errors.deliveryDate && (
-                        <p className="text-red-500 text-sm">
-                          {formik.errors.deliveryDate}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="address"
-                      className="mb-2 block text-sm font-medium text-gray-900"
-                    >
-                      Delivery address
-                    </label>
-                    <Textarea
-                      id="address"
-                      name="address"
-                      rows={2}
-                      value={formik.values.address}
-                      onChange={formik.handleChange}
-                      className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                      placeholder="1st cross lane, Templers Road"
+                    <TextInput
+                      label="Recipient's contact number"
+                      placeholder="0713252XXX"
+                      field={formik.getFieldProps("phone")}
+                      meta={formik.getFieldMeta("phone")}
                     />
-                    {formik.errors.address && (
-                      <p className="text-red-500 text-sm">
-                        {formik.errors.address}
-                      </p>
-                    )}
+                    <TextInput
+                      label="Delivery Date"
+                      placeholder="21/10/2024"
+                      field={formik.getFieldProps("deliveryDate")}
+                      meta={formik.getFieldMeta("deliveryDate")}
+                    />
                   </div>
+                  <TextAreaInput
+                    label="Delivery address"
+                    rows={3}
+                    field={formik.getFieldProps("address")}
+                    meta={formik.getFieldMeta("address")}
+                  />
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -348,7 +315,7 @@ const Checkout: React.FC = () => {
                           aria-hidden="true"
                         />
                       </div>
-                      {formik.errors.city && (
+                      {formik.touched && formik.errors.city && (
                         <p className="text-red-500 text-sm">
                           {formik.errors.city}
                         </p>
@@ -385,8 +352,6 @@ const Checkout: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4"></div>
-
                   {/* <div className="flex items-center space-x-2">
                     <Checkbox
                       checked={billingAddressSame}
@@ -410,97 +375,33 @@ const Checkout: React.FC = () => {
                   <CardTitle>Sender's Details</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label
-                        htmlFor="email"
-                        className="mb-2 block text-sm font-medium text-gray-900"
-                      >
-                        Sender's name
-                      </label>
-                      <input
-                        type="text"
-                        id="sendersName"
-                        name="sendersName"
-                        value={formik.values.sendersName}
-                        onChange={formik.handleChange}
-                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                        placeholder="Jessy"
-                      />
-                      {formik.errors.sendersName && (
-                        <p className="text-red-500 text-sm">
-                          {formik.errors.sendersName}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="email"
-                        className="mb-2 block text-sm font-medium text-gray-900"
-                      >
-                        Sender's email
-                      </label>
-                      <input
-                        type="text"
-                        id="sendersEmail"
-                        name="sendersEmail"
-                        value={formik.values.sendersEmail}
-                        onChange={formik.handleChange}
-                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                        placeholder="jessy123@gmail.com"
-                      />
-                      {formik.errors.sendersEmail && (
-                        <p className="text-red-500 text-sm">
-                          {formik.errors.sendersEmail}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="phone"
-                        className="mb-2 block text-sm font-medium text-gray-900"
-                      >
-                        Sender's contact number
-                      </label>
-                      <input
-                        type="text"
-                        id="sendersPhone"
-                        name="sendersPhone"
-                        value={formik.values.sendersPhone}
-                        onChange={formik.handleChange}
-                        className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                        placeholder="0773252XXX"
-                      />
-                      {formik.errors.sendersPhone && (
-                        <p className="text-red-500 text-sm">
-                          {formik.errors.sendersPhone}
-                        </p>
-                      )}
-                    </div>
+                  <div className="grid grid-cols-2 gap-4 mb-3">
+                    <TextInput
+                      label="Sender's name"
+                      placeholder="Jessy"
+                      field={formik.getFieldProps("sendersName")}
+                      meta={formik.getFieldMeta("sendersName")}
+                    />
+                    <TextInput
+                      label="Sender's email"
+                      placeholder="jessy@gmail.com"
+                      field={formik.getFieldProps("sendersEmail")}
+                      meta={formik.getFieldMeta("sendersEmail")}
+                    />
+                    <TextInput
+                      label="Sender's contact number"
+                      placeholder="0773252XXX"
+                      field={formik.getFieldProps("sendersPhone")}
+                      meta={formik.getFieldMeta("sendersPhone")}
+                    />
                   </div>
 
-                  <div>
-                    <label
-                      htmlFor="specialMsg"
-                      className="mb-2 block text-sm font-medium text-gray-900 mt-2"
-                    >
-                      Special Message
-                    </label>
-                    <Textarea
-                      id="specialMsg"
-                      name="specialMsg"
-                      value={formik.values.specialMsg}
-                      onChange={formik.handleChange}
-                      className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                      placeholder="Happy birthday my love"
-                      rows={3}
-                    />
-                    {formik.errors.specialMsg && (
-                      <p className="text-red-500 text-sm">
-                        {formik.errors.specialMsg}
-                      </p>
-                    )}
-                  </div>
+                  <TextAreaInput
+                    label="Special Message"
+                    rows={3}
+                    field={formik.getFieldProps("specialMsg")}
+                    meta={formik.getFieldMeta("specialMsg")}
+                  />
                 </CardContent>
               </Card>
 
@@ -767,73 +668,13 @@ const Checkout: React.FC = () => {
           )}
         </div>
 
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>In your Cart</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>{formatCurrency(subtotal)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Delivery Fee</span>
-                  <span>{formatCurrency(selectedDeliveryMethod.price)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Taxes</span>
-                  <span>{formatCurrency(0)}</span>
-                </div>
-                <div className="flex justify-between font-bold">
-                  <span>Total</span>
-                  <span>{formatCurrency(subtotal)}</span>
-                </div>
-                {items.map((item) => (
-                  <div className="border-t pt-4">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-16 h-16 bg-gray-200 rounded-md">
-                        <img
-                          src={item.imageurl}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">{item.name}</h3>
-                        {/* <p className="text-sm text-gray-500">
-                            Variant: Height only
-                          </p> */}
-                        <div className="flex items-center space-x-2">
-                          {/* <span className="text-sm line-through text-gray-500">
-                             {formatCurrency(item.price)}
-                            </span> */}
-                          <span className="font-semibold">
-                            {formatCurrency(item.price)}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-500">
-                          {item.quantity}x
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                <input
-                  placeholder="Add gift card or discount code"
-                  className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
-                />
-                <Button
-                  className="w-full border border-gray-600 p-1.5 rounded hover:bg-teal hover:text-white hover:border-teal"
-                  onClick={handleDiscount}
-                >
-                  Apply
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <CartInfo
+          items={items}
+          subtotal={subtotal}
+          selectedDeliveryMethod={selectedDeliveryMethod}
+          formatCurrency={formatCurrency}
+          handleDiscount={handleDiscount}
+        />
       </div>
     </div>
   );
