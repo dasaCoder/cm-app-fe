@@ -7,6 +7,7 @@ import { useAppDispatch } from "../../lib/hooks";
 import { addItem } from "../../lib/features/cart/cart-slice";
 import ItemCarousel from "../../components/ItemCarousel";
 import useFetch from "../../lib/hooks/http/useFetch";
+import ItemPageSkeleton from "./ItemPageSkeleton";
 
 type ItemParams = {
   id: string;
@@ -53,7 +54,7 @@ const ItemComponent: React.FC = () => {
   };
 
   const paintItemLoading = () => {
-    return <div>loading...</div>;
+    return <ItemPageSkeleton />;
   };
 
   return (
@@ -76,8 +77,8 @@ const ItemComponent: React.FC = () => {
 
       {item ? paintItem(item) : paintItemLoading()}
 
-      <h2 className="text-2xl font-bold mt-8 mb-4">Suggested items</h2>
-      {suggestedItems && <ItemCarousel items={suggestedItems} />}
+      {suggestedItems && item && <h2 className="text-2xl font-bold mt-8 mb-4">Suggested items</h2>}
+      {suggestedItems && item && <ItemCarousel items={suggestedItems} />}
     </div>
   );
 };

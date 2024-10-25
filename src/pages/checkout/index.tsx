@@ -1,9 +1,4 @@
-import {
-  Button,
-  RadioGroup,
-  Radio,
-  Select,
-} from "@headlessui/react";
+import { Button, RadioGroup, Radio, Select } from "@headlessui/react";
 import {
   CheckCircleIcon,
   ChevronDownIcon,
@@ -28,16 +23,9 @@ import TextInput from "../../components/input/Input";
 import CartInfo from "./CartSummary";
 import TextAreaInput from "../../components/input/text-area";
 import usePost from "../../lib/hooks/http/usePost";
-
-enum CurrentStep {
-  "DELIVERY_DETAILS",
-  "DELIVERY_ADDRESS",
-  "DELIVERY",
-  "PAYMENT",
-  "REVIEW",
-  "PAYMENT_CONFIRMATION",
-  "ORDER_PLACED",
-}
+import OrderReviewCard from "./OrderReviewCard";
+import PaymentCard from "./PaymentCard";
+import { CurrentStep } from "../../types/checkout-page";
 
 const Checkout: React.FC = () => {
   const merchantId = process.env.REACT_APP_PAYHERE_MERCHANT_ID || "";
@@ -54,11 +42,11 @@ const Checkout: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [payhereHash, setPayhereHash] = useState("");
   const [orderId, setOrderId] = useState("");
-  const { sendRequest: sendPlaceOrderRequest, loading, data: placeOrderResponse } = usePost<{data: {id: string}}>("orders", {});
-
-  const randomUUID = () => {
-    return `${new Date().getTime()}`;
-  }
+  const {
+    sendRequest: sendPlaceOrderRequest,
+    loading,
+    data: placeOrderResponse,
+  } = usePost<{ data: { id: string } }>("orders", {});
 
   const generatePayhereHash = (
     merchantId: string,
@@ -163,7 +151,7 @@ const Checkout: React.FC = () => {
       setTimeout(() => {
         setCurrentStep(CurrentStep.DELIVERY);
         setIsProcessing(false);
-      }, 3000);
+      }, 700);
     }
   };
 
@@ -185,42 +173,42 @@ const Checkout: React.FC = () => {
 
   const handlePayAction = () => {
     console.log("Payment action");
+    const requestBody = {
+      guest_email: formik.values.sendersEmail,
+      delivery_city: formik.values.city,
+      delivery_address: formik.values.address,
+      delivery_fee: selectedDeliveryMethod.price,
+      handling_fee: 0,
+      tax: 0,
+      discounted_amount: 0,
+      total_price: subtotal + selectedDeliveryMethod.price,
+      items: items.map((item) => ({
+        item_id: item.id,
+        quantity: item.quantity,
+        variant: "sm",
+        price: item.price,
+      })),
+    };
+    console.log("requestBody", requestBody);
     setIsProcessing(true);
-    console.log({
-      ...formik.values,
-      deliveryMethod: selectedDeliveryMethod.id,
-      paymentMethodList: selectedPaymentMethod.id,
-    });
-    setTimeout(async () => {
-
-      await sendPlaceOrderRequest({
-        guest_email: formik.values.sendersEmail,
-        delivery_city: formik.values.city,
-        delivery_address: formik.values.address,
-        delivery_fee: selectedDeliveryMethod.price,
-        handling_fee: 0,
-        tax: 0,
-        discounted_amount: 0,
-        total_price: subtotal + selectedDeliveryMethod.price,
-        items: items.map((item) => ({
-          item_id: item.id,
-          quantity: item.quantity,
-          variant: "sm",
-          price: item.price,
-        })),
-      });
-
-      if (placeOrderResponse) {
-        setOrderId(placeOrderResponse.data.id);
-        const form = document.getElementById("checkoutForm") as HTMLFormElement;
-        if (form) {
-          form.submit();
+    setTimeout(() => {
+      sendPlaceOrderRequest(requestBody).then((response) => {
+        if (response) {
+          setOrderId(response.data.data.id);
+          const form = document.getElementById(
+            "checkoutForm"
+          ) as HTMLFormElement;
+          setTimeout(() => {
+            if (form) {
+              // form.submit();
+            }
+            setIsProcessing(false);
+          }, 2000);
+        } else {
+          setIsProcessing(false);
         }
-      } else {
-        alert("Something went wrong");
-      }
-      setIsProcessing(false);
-    }, 2000);
+      });
+    }, 1000);
   };
 
   return (
@@ -303,6 +291,7 @@ const Checkout: React.FC = () => {
                           name="city"
                           value={formik.values.city}
                           onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
                           className="appearance-none block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500"
                         >
                           <option value=""></option>
@@ -315,7 +304,7 @@ const Checkout: React.FC = () => {
                           aria-hidden="true"
                         />
                       </div>
-                      {formik.touched && formik.errors.city && (
+                      {formik.touched.city && formik.errors.city && (
                         <p className="text-red-500 text-sm">
                           {formik.errors.city}
                         </p>
@@ -334,6 +323,7 @@ const Checkout: React.FC = () => {
                           name="locationType"
                           value={formik.values.locationType}
                           onChange={formik.handleChange}
+                          onBlur={formik.handleBlur}
                           className="appearance-none block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500"
                         >
                           <option value="Home">Home</option>
@@ -344,7 +334,7 @@ const Checkout: React.FC = () => {
                           aria-hidden="true"
                         />
                       </div>
-                      {formik.errors.locationType && (
+                      {formik.touched.locationType && formik.errors.locationType && (
                         <p className="text-red-500 text-sm">
                           {formik.errors.locationType}
                         </p>
@@ -412,9 +402,8 @@ const Checkout: React.FC = () => {
                       By clicking the Continue to delivery button, you confirm
                       that you have read, understand and accept our Terms of
                       Use, Terms of Sale and Returns Policy and acknowledge that
-                      you have read Medusa Store's Privacy Policy.{" "}
-                      {JSON.stringify(formik.errors)}
-                      <a href="#" className="text-blue-500 hover:underline">
+                      you have read Max Store's Privacy Policy.
+                      <a href="/privacy-policy" className="text-blue-500 hover:underline">
                         Privacy & policy
                       </a>
                     </p>
@@ -513,91 +502,14 @@ const Checkout: React.FC = () => {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                Payment
-                <InfoIcon className="w-4 h-4 ml-2 text-blue-500" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {currentStep !== CurrentStep.PAYMENT && (
-                <>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-semibold">Payment method</h3>
-                      <p>{selectedPaymentMethod.name}</p>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">Payment details</h3>
-                      <p>{selectedPaymentMethod.description}</p>
-                    </div>
-                  </div>
-                  <Button
-                    className="mt-4 text-sm text-blue-500"
-                    onClick={handleGoToPayment}
-                  >
-                    Edit
-                  </Button>
-                </>
-              )}
-
-              {currentStep === CurrentStep.PAYMENT && (
-                <div className="w-full">
-                  <div className="w-full">
-                    <RadioGroup
-                      value={selectedDeliveryMethod}
-                      onChange={setSelectedDeliveryMethod}
-                      aria-label="Server size"
-                      className="space-y-2"
-                    >
-                      {paymentMethodList.map((paymentMethod) => (
-                        <Radio
-                          key={paymentMethod.id}
-                          value={paymentMethod}
-                          className="group relative flex cursor-pointer rounded-lg bg-white py-4 px-5 mb-4 text-teal shadow-md transition focus:outline-none data-[focus]:outline-1 data-[focus]:outline-teal data-[checked]:bg-ivory"
-                        >
-                          <div className="flex w-full items-center justify-between">
-                            <div className="flex items-center">
-                              <div>
-                                <img
-                                  className="w-[25px] mr-4"
-                                  src={paymentMethod.icon}
-                                />
-                              </div>
-                              <div className="text-sm/6">
-                                <p className="font-semibold text-teal">
-                                  {paymentMethod.name}
-                                </p>
-                                <div className="flex gap-2 text-teal/50">
-                                  <div>{paymentMethod.description}</div>
-                                </div>
-                              </div>
-                            </div>
-                            <CheckCircleIcon
-                              className={cn(
-                                "size-5 text-teal transition",
-                                selectedPaymentMethod.id === paymentMethod.id
-                                  ? "opacity-100"
-                                  : "opacity-0"
-                              )}
-                            />
-                          </div>
-                        </Radio>
-                      ))}
-                    </RadioGroup>
-                  </div>
-
-                  <Button
-                    className="bg-teal text-white my-5 py-2 px-8 rounded-md hover:shadow-md transition-colors"
-                    onClick={handleReview}
-                  >
-                    Review
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <PaymentCard
+            currentStep={currentStep}
+            selectedPaymentMethod={selectedPaymentMethod}
+            paymentMethodList={paymentMethodList}
+            setSelectedPaymentMethod={setSelectedPaymentMethod}
+            handleGoToPayment={handleGoToPayment}
+            handleReview={handleReview}
+          />
 
           <form
             id="checkoutForm"
@@ -643,28 +555,12 @@ const Checkout: React.FC = () => {
           )}
 
           {currentStep === CurrentStep.REVIEW && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Review</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm/6">
-                  <p className="text-teal">
-                    By clicking the Place Order button, you confirm that you
-                    have read, understand and accept our Terms of Use, Terms of
-                    Sale and Returns Policy and acknowledge that you have read
-                    Max Store's Privacy Policy.
-                  </p>
-                  <Button
-                    className="flex items-center justify-center bg-teal text-white my-5 py-2 px-8 rounded-md hover:shadow-md transition-colors"
-                    onClick={handlePayAction}
-                  >
-                    {isProcessing && <Loader className="animate-spin mr-3" />}
-                    Pay
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <OrderReviewCard
+            handlePayAction={handlePayAction}
+            loading={loading}
+            isProcessing={isProcessing}
+            placeOrderResponse={placeOrderResponse}
+          />
           )}
         </div>
 

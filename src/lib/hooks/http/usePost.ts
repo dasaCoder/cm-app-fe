@@ -5,7 +5,7 @@ interface UsePostResult<T> {
   data: T | null;
   loading: boolean;
   error: string | null;
-  sendRequest: (body: unknown) => Promise<void>;
+  sendRequest: (body: unknown) => Promise<AxiosResponse<T>>;
 }
 
 const usePost = <T = unknown>(
@@ -18,12 +18,15 @@ const usePost = <T = unknown>(
   const [error, setError] = useState<string | null>(null);
 
   const sendRequest = async (body: unknown) => {
+    let response: AxiosResponse<T>;
     try {
       setLoading(true);
-      const response: AxiosResponse<T> = await axios.post(`${baseUrl}/${url}`, body, options);
+      response = await axios.post(`${baseUrl}/${url}`, body, options);
       setData(response.data);
+      return response;
     } catch (err: any) {
       setError(err.message || "An error occurred");
+      return err;
     } finally {
       setLoading(false);
     }
