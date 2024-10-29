@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../lib/hooks';
 import { RootState } from '../../lib/store';
 import { Trash2, Plus, Minus, HelpCircle } from 'lucide-react';
-import { updateQuantity } from '../../lib/features/cart/cart-slice';
+import { removeItem, updateQuantity } from '../../lib/features/cart/cart-slice';
 import { formatCurrency } from '../../utils/currency';
 
 const Cart: React.FC = () => {
@@ -15,6 +15,10 @@ const Cart: React.FC = () => {
     const router = useNavigate();
   
     const handleQuantityChange = (id: string, quantity: number) => {
+      if(quantity === 0 ){
+        dispatch(removeItem(id))
+      }
+      if (quantity < 1) return;
       dispatch(updateQuantity({ id, quantity }));
     };
   
@@ -119,12 +123,7 @@ const Cart: React.FC = () => {
             <div className="lg:w-1/3">
               <h2 className="text-3xl font-bold mb-6">Summary</h2>
               <div className="bg-gray-50 p-6 rounded-lg">
-                <div className="flex justify-between items-center mb-4">
-                  <span className="text-blue-600 flex items-center">
-                    Add gift card or discount code
-                    <HelpCircle className="w-4 h-4 ml-1" />
-                  </span>
-                </div>
+                
                 <div className="space-y-2 mb-4">
                   <div className="flex justify-between">
                     <span>Subtotal</span>

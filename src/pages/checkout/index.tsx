@@ -16,7 +16,7 @@ import { useFormik } from "formik";
 import checkoutFormSchema from "../../lib/validation-schemas/checkout-form";
 import { cn } from "../../utils/tailwind";
 import { addDecimalPoints, formatCurrency } from "../../utils/currency";
-import { useAppSelector } from "../../lib/hooks";
+import { useAppDispatch, useAppSelector } from "../../lib/hooks";
 import { useNavigate } from "react-router-dom";
 import { stringToMD5 } from "../../utils/crypto";
 import TextInput from "../../components/input/Input";
@@ -26,6 +26,7 @@ import usePost from "../../lib/hooks/http/usePost";
 import OrderReviewCard from "./OrderReviewCard";
 import PaymentCard from "./PaymentCard";
 import { CurrentStep } from "../../types/checkout-page";
+import { showInfoDialog } from "../../lib/features/app/app-slice";
 
 const Checkout: React.FC = () => {
   const merchantId = process.env.REACT_APP_PAYHERE_MERCHANT_ID || "";
@@ -33,15 +34,23 @@ const Checkout: React.FC = () => {
   const cancelUrl = process.env.REACT_APP_PAYHERE_CANCEL_URL || "";
   const notifyUrl = process.env.REACT_APP_PAYHERE_NOTIFY_URL || "";
   const payhereSecret = process.env.REACT_APP_PAYHERE_SECRET_KEY || "";
+  const handlingFee = process.env.HANDLING_FEE
+    ? parseInt(process.env.HANDLING_FEE)
+    : 0;
+
+  // TODO - update with proper discount impl
+  const discountedAmount = 0;
 
   const { items, subtotal } = useAppSelector((state) => state.cart);
   const [currentStep, setCurrentStep] = useState<CurrentStep>(
-    CurrentStep.DELIVERY_DETAILS
+    CurrentStep.REVIEW
   );
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [payhereHash, setPayhereHash] = useState("");
   const [orderId, setOrderId] = useState("");
+  const dispatch = useAppDispatch();
+
   const {
     sendRequest: sendPlaceOrderRequest,
     loading,
@@ -81,12 +90,14 @@ const Checkout: React.FC = () => {
     {
       id: "1",
       name: "Standard Delivery",
+      type: "STANDARD_DELIVERY",
       description: "Within 72 Hours",
       price: 300,
     },
     {
       id: "2",
       name: "Express Delivery",
+      type: "EXPRESS_DELIVERY",
       description: "Within 30 Hours inside colombo",
       price: 600,
     },
@@ -96,18 +107,21 @@ const Checkout: React.FC = () => {
     {
       id: "1",
       name: "Debit / Credit Card",
+      type: "CARD",
       description: "Visa, Mastercard, American Express",
       icon: "images/icons/credit-card.png",
     },
     {
       id: "2",
       name: "Bank Transfer",
+      type: "BANK_TRANSFER",
       description: "Make your payment directly into our bank account",
       icon: "images/icons/bank-transfer.png",
     },
     {
       id: "3",
       name: "Cash on Delivery",
+      type: "CASH_ON_DELIVERY",
       description: "Pay with cash upon delivery",
       icon: "images/icons/cash-on-delivery.png",
     },
@@ -171,17 +185,79 @@ const Checkout: React.FC = () => {
     console.log("Discount applied");
   };
 
+  const calculateTotal = (): number => {
+    return subtotal + selectedDeliveryMethod.price + handlingFee;
+  };
+
+  const handlePayment = (paymentMethod: string, orderId: string) => {
+    switch (paymentMethod) {
+      case "CARD":
+        console.log("Card payment");
+        const form = document.getElementById("checkoutForm") as HTMLFormElement;
+        if (form) {
+          // form.submit();
+        }
+        break;
+      case "BANK_TRANSFER":
+        console.log("Bank transfer");
+        dispatch(
+          showInfoDialog({
+            title: "Bank Transfer",
+            content:
+              "Please make your payment directly to our bank account. Your order will be processed once the payment is confirmed.",
+            onClose: () => router(`/order-confirmation?order_id=${orderId}`),
+            buttonText: "View Order Summary",
+            imgUrl: "/images/transfer.png"
+          })
+        );
+        break;
+      case "CASH_ON_DELIVERY":
+        console.log("Cash on delivery");
+        dispatch(
+          showInfoDialog({
+            title: "Cash on Delivery",
+            content:
+              "Please make your payment in cash when the order is delivered to you.",
+            onClose: () => router(`/order-confirmation?order_id=${orderId}`),
+            buttonText: "View Order Summary",
+            imgUrl: "/images/transfer.png"
+          })
+        );
+        break;
+      default:
+        alert("Invalid payment method");
+        break;
+    }
+  }; 
+
   const handlePayAction = () => {
+    if (!formik.isValid) {
+      return;
+    }
+    setIsProcessing(true);
     console.log("Payment action");
     const requestBody = {
       guest_email: formik.values.sendersEmail,
       delivery_city: formik.values.city,
       delivery_address: formik.values.address,
       delivery_fee: selectedDeliveryMethod.price,
-      handling_fee: 0,
+      delivery_date: formik.values.deliveryDate,
+      delivery_method: selectedDeliveryMethod.type,
+      delivery_location_type: formik.values.locationType,
+      delivery_instructions: "",
+      payment_method: selectedPaymentMethod.type,
+      handling_fee: handlingFee,
+      first_name: formik.values.first_name,
+      last_name: formik.values.last_name,
+      contact_number: formik.values.phone,
+      special_message: formik.values.specialMsg,
+      senders_name: formik.values.sendersName,
+      senders_email: formik.values.sendersEmail,
+      senders_contact_number: formik.values.sendersPhone,
       tax: 0,
-      discounted_amount: 0,
-      total_price: subtotal + selectedDeliveryMethod.price,
+      discounted_amount: discountedAmount,
+      total_price: calculateTotal(),
+      sub_total: subtotal,
       items: items.map((item) => ({
         item_id: item.id,
         quantity: item.quantity,
@@ -190,18 +266,14 @@ const Checkout: React.FC = () => {
       })),
     };
     console.log("requestBody", requestBody);
-    setIsProcessing(true);
     setTimeout(() => {
       sendPlaceOrderRequest(requestBody).then((response) => {
         if (response) {
           setOrderId(response.data.data.id);
-          const form = document.getElementById(
-            "checkoutForm"
-          ) as HTMLFormElement;
           setTimeout(() => {
-            if (form) {
-              // form.submit();
-            }
+            // TODO - clear cart
+
+            handlePayment(selectedPaymentMethod.type, response.data.data.id);
             setIsProcessing(false);
           }, 2000);
         } else {
@@ -334,11 +406,12 @@ const Checkout: React.FC = () => {
                           aria-hidden="true"
                         />
                       </div>
-                      {formik.touched.locationType && formik.errors.locationType && (
-                        <p className="text-red-500 text-sm">
-                          {formik.errors.locationType}
-                        </p>
-                      )}
+                      {formik.touched.locationType &&
+                        formik.errors.locationType && (
+                          <p className="text-red-500 text-sm">
+                            {formik.errors.locationType}
+                          </p>
+                        )}
                     </div>
                   </div>
 
@@ -403,7 +476,10 @@ const Checkout: React.FC = () => {
                       that you have read, understand and accept our Terms of
                       Use, Terms of Sale and Returns Policy and acknowledge that
                       you have read Max Store's Privacy Policy.
-                      <a href="/privacy-policy" className="text-blue-500 hover:underline">
+                      <a
+                        href="/privacy-policy"
+                        className="text-blue-500 hover:underline"
+                      >
                         Privacy & policy
                       </a>
                     </p>
@@ -556,17 +632,18 @@ const Checkout: React.FC = () => {
 
           {currentStep === CurrentStep.REVIEW && (
             <OrderReviewCard
-            handlePayAction={handlePayAction}
-            loading={loading}
-            isProcessing={isProcessing}
-            placeOrderResponse={placeOrderResponse}
-          />
+              handlePayAction={handlePayAction}
+              loading={loading}
+              isProcessing={isProcessing}
+              placeOrderResponse={placeOrderResponse}
+            />
           )}
         </div>
 
         <CartInfo
           items={items}
           subtotal={subtotal}
+          total={calculateTotal()}
           selectedDeliveryMethod={selectedDeliveryMethod}
           formatCurrency={formatCurrency}
           handleDiscount={handleDiscount}

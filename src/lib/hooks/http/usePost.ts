@@ -12,7 +12,7 @@ const usePost = <T = unknown>(
   url: string,
   options?: AxiosRequestConfig
 ): UsePostResult<T> => {
-  const baseUrl = process.env.REACT_APP_BACKEND_HOST || "";
+  const baseUrl = process.env.REACT_APP_ORDER_API_HOST || "";
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);

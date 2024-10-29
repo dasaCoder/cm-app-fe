@@ -10,6 +10,7 @@ interface DeliveryMethod {
 interface CartComponentProps {
   items: CartItem[];
   subtotal: number;
+  total: number;
   selectedDeliveryMethod: DeliveryMethod;
   formatCurrency: (value: number) => string;
   handleDiscount: () => void;
@@ -18,10 +19,12 @@ interface CartComponentProps {
 const CartInfo: React.FC<CartComponentProps> = ({
   items,
   subtotal,
+  total,
   selectedDeliveryMethod,
   formatCurrency,
   handleDiscount,
 }) => {
+  
   return (
     <div>
       <Card>
@@ -44,7 +47,7 @@ const CartInfo: React.FC<CartComponentProps> = ({
             </div>
             <div className="flex justify-between font-bold">
               <span>Total</span>
-              <span>{formatCurrency(subtotal)}</span>
+              <span>{formatCurrency(total)}</span>
             </div>
             {items.map((item) => (
               <div className="border-t pt-4" key={item.id}>

@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Item } from "../../types/item";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Loader, Minus, Plus } from "lucide-react";
 import { formatCurrency } from "../../utils/currency";
 import { useAppDispatch } from "../../lib/hooks";
 import { addItem } from "../../lib/features/cart/cart-slice";
@@ -15,14 +15,29 @@ type ItemParams = {
 
 const ItemComponent: React.FC = () => {
   const { id } = useParams<ItemParams>();
+  const [quantity, setQuantity] = useState(1);
+  const [isCartUpdating, setCartUpdating] = useState(false);
 
-  const {data: item, loading, error} = useFetch<Item>(`items/${id}`);
-  const {data: suggestedItems, loading: isSuggestedItemsLoading, error: suggestedItemsError} = useFetch<Item[]>(`items`);
+  const { data: item, loading, error } = useFetch<Item>(`items/${id}`);
+  const {
+    data: suggestedItems,
+    loading: isSuggestedItemsLoading,
+    error: suggestedItemsError,
+  } = useFetch<Item[]>(`items`);
 
   const dispatch = useAppDispatch();
 
   const handleAddToCart = () => {
-    item && dispatch(addItem({ ...item, id: item?.id, quantity: 1 }));
+    setCartUpdating(true);
+    setTimeout(() => {
+      item && dispatch(addItem({ ...item, id: item?.id, quantity }));
+      setCartUpdating(false);
+    }, 1000);
+  };
+
+  const handleQuantityChange = (id: string, quantity: number) => {
+    if (quantity < 1) return;
+    setQuantity(quantity);
   };
 
   const paintItem = (item: Item) => {
@@ -42,10 +57,40 @@ const ItemComponent: React.FC = () => {
             {formatCurrency(item.price)}
           </p>
           <p className="text-gray-600 mb-6">{item.description}</p>
+
+          <div className="inline-flex rounded-md shadow-sm mb-4" role="group">
+            <button
+              type="button"
+              className="px-4 py-2 border border-gray-200 hover:bg-gray-100 hover:text-blue-700 rounded-s-lg"
+              onClick={() => handleQuantityChange(item.id, quantity + 1)}
+            >
+              <Plus className="w-4 h-4 " />
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 text-sm font-medium text-gray-900 bg-white border-t border-b border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 "
+            >
+              <input
+                className="appearance-none w-3 bg-white"
+                value={quantity}
+                readOnly
+              />
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-e-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 "
+              onClick={() => handleQuantityChange(item.id, quantity - 1)}
+            >
+              <Minus className="w-4 h-4 " />
+            </button>
+          </div>
+
           <button
             onClick={handleAddToCart}
-            className="w-full bg-teal text-white py-3 rounded-md hover:bg-green-700 transition-colors"
+            disabled={isCartUpdating}
+            className="flex items-center justify-center bg-teal text-white py-2 px-8 rounded-md hover:shadow-md transition-colors disabled:bg-gray-300"
           >
+            {isCartUpdating && <Loader className="animate-spin mr-3"/>}
             Add to cart
           </button>
         </div>
@@ -77,7 +122,9 @@ const ItemComponent: React.FC = () => {
 
       {item ? paintItem(item) : paintItemLoading()}
 
-      {suggestedItems && item && <h2 className="text-2xl font-bold mt-8 mb-4">Suggested items</h2>}
+      {suggestedItems && item && (
+        <h2 className="text-2xl font-bold mt-8 mb-4">Suggested items</h2>
+      )}
       {suggestedItems && item && <ItemCarousel items={suggestedItems} />}
     </div>
   );

@@ -1,11 +1,18 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Disclosure } from "@headlessui/react";
-import { ChevronUp } from "lucide-react";
+import { Car, ChevronUp } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import OrderConfirmationSkeleton from "./loader";
 import { Order } from "../../types/order";
 import useFetch from "../../lib/hooks/http/useFetch";
 import { formatCurrency } from "../../utils/currency";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
+import { formatDateTime } from "../../utils/data-time";
 
 export default function OrderConfirmation() {
   const [searchParams] = useSearchParams();
@@ -14,13 +21,70 @@ export default function OrderConfirmation() {
   const [order, setOrder] = useState<Order | null>(null);
 
   const { data, loading } = useFetch<{ data: Order; success: boolean }>(
-      `orders/${orderId}`
-    );
+    `orders/${orderId}`
+  );
 
   setTimeout(() => {
     setIsLoading(false);
   }, 500);
   // fetch order details
+
+  const paintPaymentDetails = (data: Order) => {
+    if (data.payment_method === "BANK_TRANSFER") {
+      return (
+        <div className="">
+          <div>
+            <h3 className="font-semibold pb-2 text-gray-900">
+              You've selected to transfer money to our account
+            </h3>
+            <p><span className="font-medium text-gray-800">Account Number:</span> {process.env.REACT_APP_MAX_STORE_ACCOUNT_NUMBER}</p>
+            <p><span className="font-medium text-gray-800">Account Name:</span> {process.env.REACT_APP_MAX_STORE_ACCOUNT_NUMBER}</p>
+            <p><span className="font-medium text-gray-800">Bank:</span> {process.env.REACT_APP_MAX_STORE_BANK_NAME}</p>
+            <p><span className="font-medium text-gray-800">Branch:</span> {process.env.REACT_APP_MAX_STORE_BRANCH}</p>
+          </div>
+          <div className="py-2">
+            <p className="">
+              Please transfer the total amount of{" "}
+              {formatCurrency(data.total || 0)} to the above account and share
+              the payment slip through whatsapp to {process.env.REACT_APP_MAX_STORE_CONTACT_NUMBER} or email to {process.env.REACT_APP_MAX_STORE_EMAIL}
+            </p>
+          </div>
+        </div>
+      );
+    } else if (data.payment_method === "CREDIT_CARD") {
+      return (
+        <div className="">
+          <div>
+            <h3 className="font-semibold pb-2 text-gray-700">
+              You've selected to pay with your credit card
+            </h3>
+            <p><span className="font-medium">Card Type:</span> Visa</p>
+            <p><span className="font-medium">Payment Status:</span> Successful</p>
+            <p><span className="font-medium">Payment Amount:</span> {formatCurrency(0)}</p>
+            <p><span className="font-medium">Paid At:</span> Successful</p>
+           
+          </div>
+          <div className="py-2"></div>
+        </div>
+      );
+    } else if (data.payment_method === "CASH_ON_DELIVERY") {
+      return (
+        <div className="">
+          <div>
+            <h3 className="font-semibold pb-2 text-gray-700">
+              You've selected to pay with cash on delivery
+            </h3>
+            <p className="">
+              Please prepare the total amount of{" "}
+              {formatCurrency(data.total || 0)} to pay the delivery person when
+              your order arrives.
+            </p>
+          </div>
+          <div className="py-2"></div>
+        </div>
+      );
+    }
+  }
 
   if (isLoading && !data) {
     return <OrderConfirmationSkeleton />;
@@ -32,26 +96,36 @@ export default function OrderConfirmation() {
       <p className="mb-2">
         We have sent the order confirmation details to {data?.data.guest_email}.
       </p>
-      <p className="mb-2">Order date: {data?.data.created_at}</p>
+      {data?.data && <p className="mb-2">Order date: {formatDateTime(data?.data.created_at)}</p>}
       <p className="mb-4 text-blue-600">Order number: {orderId}</p>
 
       <h2 className="text-2xl font-bold mb-4">Summary</h2>
-        {data?.data.items.map((item) => (
-      <div className="flex items-center space-x-4 mb-4">
-        <div className="w-16 h-16 bg-gray-200 rounded-md"></div>
+      {data?.data.items.map((item) => (
+        <div className="flex items-center space-x-4 mb-4">
+          <div className="w-16 h-16 bg-gray-200 rounded-md">
+            <img
+              src={item.imageurl}
+              alt={item.name}
+              className="w-full h-full object-cover"
+            />
+          </div>
           <div>
             <h3 className="font-semibold">{item.name}</h3>
-            <p className="text-sm text-gray-500">Variant: {item.variant} only</p>
+            <p className="text-sm text-gray-500">
+              Variant: {item.variant} only
+            </p>
             <div className="flex items-center space-x-2">
               {/* <span className="text-sm line-through text-gray-500">
                 $600.00
               </span> */}
-              <span className="font-semibold">{formatCurrency(item.price)}</span>
+              <span className="font-semibold">
+                {formatCurrency(item.price)}
+              </span>
             </div>
             <p className="text-sm text-gray-500">{item.quantity}x</p>
           </div>
-      </div>
-        ))}
+        </div>
+      ))}
 
       <div className="space-y-2 mb-6">
         <div className="flex justify-between">
@@ -60,15 +134,15 @@ export default function OrderConfirmation() {
         </div>
         <div className="flex justify-between">
           <span>Shipping</span>
-          <span>{formatCurrency(0)}</span>
+          <span>{formatCurrency(data?.data.delivery_fee || 0)}</span>
         </div>
         <div className="flex justify-between">
-          <span>Taxes</span>
-          <span>{formatCurrency(data?.data.tax || 0)}</span>
+          <span>Handling Fee</span>
+          <span>{formatCurrency(data?.data.handling_fee || 0)}</span>
         </div>
         <div className="flex justify-between font-bold">
           <span>Total</span>
-          <span>{formatCurrency(data?.data.total_price || 0)}</span>
+          <span>{formatCurrency(data?.data.total || 0)}</span>
         </div>
       </div>
 
@@ -79,7 +153,6 @@ export default function OrderConfirmation() {
           <p>{data?.data.delivery_address}</p>
           <p>{data?.data.delivery_city}</p>
           <p>{data?.data.phone_no}</p>
-         
         </div>
         <div>
           <h3 className="font-semibold">Contact</h3>
@@ -87,24 +160,22 @@ export default function OrderConfirmation() {
         </div>
         <div>
           <h3 className="font-semibold">Method</h3>
-          <p>{data?.data.delivery_method} ({formatCurrency(data?.data.delivery_fee || 0)})</p>
-        </div>
-      </div>
-
-      <h2 className="text-2xl font-bold mb-4">Payment</h2>
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div>
-          <h3 className="font-semibold">Payment method</h3>
-          <p>{data?.data.payment_method}</p>
-        </div>
-        <div>
-          <h3 className="font-semibold">Payment details</h3>
           <p>
-            $2,208.00 paid {data?.data.order_status} at Tue Oct 08 2024 10:21:46 GMT+0000 (Coordinated
-            Universal Time)
+            {data?.data.delivery_method} (
+            {formatCurrency(data?.data.delivery_fee || 0)})
           </p>
         </div>
       </div>
+
+      <h2 className="text-2xl font-bold mb-4">Payment Details</h2>
+
+      <div className="container mx-auto py-2 animate-">
+          <div className="gap-8">
+            <div className="md:col-span-2 space-y-6">
+                  {data?.data && paintPaymentDetails(data?.data)}
+            </div>
+          </div>
+        </div>
 
       <Disclosure>
         {({ open }) => (
@@ -114,7 +185,7 @@ export default function OrderConfirmation() {
               <ChevronUp
                 className={`${
                   open ? "rotate-180 transform" : ""
-                } h-5 w-5 text-gray-500`}
+                } h-5 w-5 text-gray-800`}
               />
             </Disclosure.Button>
             <Disclosure.Panel className="px-4 pt-4 pb-2 text-sm text-gray-500">

@@ -27,7 +27,7 @@ export interface OrderItem {
     delivery_address: string;
     phone_no: string;
     order_status: string;
-    total_price: number;
+    total: number;
     created_at: string;
     updated_at: string;
     items: OrderItem[];

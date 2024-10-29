@@ -10,13 +10,7 @@ interface PaymentMethod {
   name: string;
   description: string;
   icon: string;
-}
-
-interface DeliveryMethod {
-    id: string;
-    name: string;
-    description: string;
-    price: number;
+  type: string;
 }
 
 interface PaymentCardProps {
