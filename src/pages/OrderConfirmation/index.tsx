@@ -1,17 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { Disclosure } from "@headlessui/react";
-import { Car, ChevronUp } from "lucide-react";
+import { ChevronUp } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import OrderConfirmationSkeleton from "./loader";
 import { Order } from "../../types/order";
 import useFetch from "../../lib/hooks/http/useFetch";
 import { formatCurrency } from "../../utils/currency";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
 import { formatDateTime } from "../../utils/data-time";
 
 export default function OrderConfirmation() {
@@ -88,6 +82,17 @@ export default function OrderConfirmation() {
 
   if (isLoading && !data) {
     return <OrderConfirmationSkeleton />;
+  }
+
+  if (data && data.data.order_status !== "CONFIRMED") {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-2">Something went wrong!</h1>
+        <p className="text-xl mb-4">
+          Your order was not placed successfully. Please try again.
+        </p>
+      </div>
+    );
   }
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">

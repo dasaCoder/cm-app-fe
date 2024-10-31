@@ -1,5 +1,5 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, BrowserRouter } from "react-router-dom";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Home from "./pages/Home";
@@ -14,7 +14,7 @@ const App: React.FC = () => {
     (state) => state.app
   );
   return (
-    <Router>
+    <>
       <div className="bg-gray-50">
         <Routes>
           <Route path="/" element={<Home />} />
@@ -33,7 +33,7 @@ const App: React.FC = () => {
         buttonText={infoMessage.buttonText}
         closeModal={infoMessage.onClose}
       />
-    </Router>
+    </>
   );
 };
 

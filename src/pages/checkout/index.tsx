@@ -27,6 +27,9 @@ import OrderReviewCard from "./OrderReviewCard";
 import PaymentCard from "./PaymentCard";
 import { CurrentStep } from "../../types/checkout-page";
 import { showInfoDialog } from "../../lib/features/app/app-slice";
+import DatePicker from "react-date-picker";
+import "react-date-picker/dist/DatePicker.css";
+import 'react-calendar/dist/Calendar.css';
 
 const Checkout: React.FC = () => {
   const merchantId = process.env.REACT_APP_PAYHERE_MERCHANT_ID || "";
@@ -43,7 +46,7 @@ const Checkout: React.FC = () => {
 
   const { items, subtotal } = useAppSelector((state) => state.cart);
   const [currentStep, setCurrentStep] = useState<CurrentStep>(
-    CurrentStep.REVIEW
+    CurrentStep.DELIVERY_DETAILS
   );
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -195,7 +198,7 @@ const Checkout: React.FC = () => {
         console.log("Card payment");
         const form = document.getElementById("checkoutForm") as HTMLFormElement;
         if (form) {
-          // form.submit();
+          form.submit();
         }
         break;
       case "BANK_TRANSFER":
@@ -207,7 +210,7 @@ const Checkout: React.FC = () => {
               "Please make your payment directly to our bank account. Your order will be processed once the payment is confirmed.",
             onClose: () => router(`/order-confirmation?order_id=${orderId}`),
             buttonText: "View Order Summary",
-            imgUrl: "/images/transfer.png"
+            imgUrl: "/images/transfer.png",
           })
         );
         break;
@@ -220,7 +223,7 @@ const Checkout: React.FC = () => {
               "Please make your payment in cash when the order is delivered to you.",
             onClose: () => router(`/order-confirmation?order_id=${orderId}`),
             buttonText: "View Order Summary",
-            imgUrl: "/images/transfer.png"
+            imgUrl: "/images/transfer.png",
           })
         );
         break;
@@ -228,7 +231,7 @@ const Checkout: React.FC = () => {
         alert("Invalid payment method");
         break;
     }
-  }; 
+  };
 
   const handlePayAction = () => {
     if (!formik.isValid) {
@@ -336,12 +339,34 @@ const Checkout: React.FC = () => {
                       field={formik.getFieldProps("phone")}
                       meta={formik.getFieldMeta("phone")}
                     />
-                    <TextInput
-                      label="Delivery Date"
-                      placeholder="21/10/2024"
-                      field={formik.getFieldProps("deliveryDate")}
-                      meta={formik.getFieldMeta("deliveryDate")}
-                    />
+
+                    <div>
+                      <label
+                        htmlFor="deliveryDate"
+                        className="mb-2 block text-sm font-medium text-gray-900"
+                      >
+                        Delivery Date
+                      </label>
+                      <div className="relative">
+                        <DatePicker
+                          name="deliveryDate"
+                          className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-1.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500"
+                          value={formik.values.deliveryDate}
+                          onChange={(newdate) => {
+                            formik.setFieldValue("deliveryDate", newdate);
+                          }}
+                          minDate={new Date()}
+                          clearIcon=""
+                        />
+                      </div>
+                      {formik.touched.deliveryDate &&
+                        formik.errors.deliveryDate && (
+                          <p className="text-red-500 text-sm">
+                            {formik.errors.deliveryDate}
+                          </p>
+                        )}
+                    </div>
+
                   </div>
                   <TextAreaInput
                     label="Delivery address"

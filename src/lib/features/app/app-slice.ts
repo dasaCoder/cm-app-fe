@@ -1,5 +1,6 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit"
 import exp from "constants"
+import { stat } from "fs"
 
 interface InfoMessage {
     title: string
@@ -12,6 +13,7 @@ interface InfoMessage {
 export interface AppState {
     isShowInfoDialog: boolean
     infoMessage: InfoMessage
+    isMobileNavOpen: boolean
 }
 
 const initialState: AppState = {
@@ -21,7 +23,8 @@ const initialState: AppState = {
         content: '',
         buttonText: '',
         onClose: () => {}
-    }
+    },
+    isMobileNavOpen: false
 }
 
 export const appSlice = createSlice({
@@ -35,10 +38,13 @@ export const appSlice = createSlice({
         hideInfoDialog: (state) => {
             state.isShowInfoDialog = false
             state.infoMessage = initialState.infoMessage
+        },
+        toggleMobileNav: (state) => {
+            state.isMobileNavOpen = !state.isMobileNavOpen
         }
     }
 })
 
-export const { showInfoDialog, hideInfoDialog } = appSlice.actions;
+export const { showInfoDialog, hideInfoDialog, toggleMobileNav } = appSlice.actions;
 
 export default appSlice.reducer
