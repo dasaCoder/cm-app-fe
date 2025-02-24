@@ -8,7 +8,7 @@ import { ContactForm } from "./ContactForm";
 
 export const ContactList: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { contacts, status, error } = useSelector(
+  const { contacts, loading, error } = useSelector(
     (state: RootState) => state.contacts
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -16,10 +16,10 @@ export const ContactList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    if (status === "idle") {
+    if (!loading) {
       dispatch(fetchContacts());
     }
-  }, [status, dispatch]);
+  }, [loading, dispatch]);
 
   const filteredContacts = contacts.filter(
     (contact) =>
@@ -38,13 +38,9 @@ export const ContactList: React.FC = () => {
     }
   };
 
-  if (status === "loading") {
-    return <div>Loading...</div>;
-  }
-
-  if (status === "failed") {
-    return <div>Error: {error}</div>;
-  }
+  // if ( loading) {
+  //   return <div>Loading...</div>;
+  // }
 
   return (
     <div className="container mx-auto px-4 py-8">
