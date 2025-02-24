@@ -10,6 +10,9 @@ interface ContactFormProps {
   onClose: () => void;
 }
 
+// Simple regex for Canadian phone numbers (XXX-XXX-XXXX)
+const phoneRegExp = /^\d{3}-\d{3}-\d{4}$/;
+
 const validationSchema = Yup.object({
   name: Yup.string()
     .required('Name is required')
@@ -18,13 +21,22 @@ const validationSchema = Yup.object({
     .email('Invalid email address')
     .required('Email is required'),
   phone: Yup.string()
-    .matches(/^\+?[\d\s-]+$/, 'Invalid phone number')
-    .min(10, 'Phone number must be at least 10 digits')
+    .matches(phoneRegExp, 'Please enter phone number in format: XXX-XXX-XXXX')
     .nullable(),
 });
 
 export const ContactForm: React.FC<ContactFormProps> = ({ contact, onClose }) => {
   const dispatch = useAppDispatch();
+
+  const formatPhoneNumber = (value: string): string => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+    
+    // Format as XXX-XXX-XXXX
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+  };
 
   const formik = useFormik({
     initialValues: {
@@ -46,6 +58,11 @@ export const ContactForm: React.FC<ContactFormProps> = ({ contact, onClose }) =>
       }
     },
   });
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    formik.setFieldValue('phone', formatted);
+  };
 
   return (
     <form onSubmit={formik.handleSubmit} className="space-y-4">
@@ -89,12 +106,14 @@ export const ContactForm: React.FC<ContactFormProps> = ({ contact, onClose }) =>
 
       <div>
         <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-          Phone
+          Phone Number
         </label>
         <input
           id="phone"
           type="tel"
           {...formik.getFieldProps('phone')}
+          onChange={handlePhoneChange}
+          placeholder="XXX-XXX-XXXX"
           className={`mt-1 block w-full rounded-md shadow-sm border focus:border-indigo-500 focus:ring-indigo-500 p-2 ${
             formik.touched.phone && formik.errors.phone
               ? 'border-red-300'
