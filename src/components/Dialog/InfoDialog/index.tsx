@@ -7,8 +7,8 @@ import {
   TransitionChild,
 } from "@headlessui/react";
 import { X } from "lucide-react";
-import { useAppDispatch, useAppSelector } from "../../../lib/hooks";
-import { hideInfoDialog } from "../../../lib/features/app/app-slice";
+// import { useAppDispatch, useAppSelector } from "../../../lib/hooks";
+// import { hideInfoDialog } from "../../../lib/features/app/app-slice";
 
 interface InfoDialogProps {
   isOpen: boolean;
@@ -28,10 +28,10 @@ const InfoDialog: React.FC<InfoDialogProps> = ({
   closeModal,
 }) => {
 
-  const dispatch = useAppDispatch();
+  // const dispatch = useAppDispatch();
 
   const handleClose = () => {
-    dispatch(hideInfoDialog());
+    // dispatch(hideInfoDialog());
     closeModal();
   }
 

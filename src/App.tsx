@@ -1,38 +1,18 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, BrowserRouter } from "react-router-dom";
-import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout";
-import Home from "./pages/Home";
-import Item from "./pages/Item";
-import OrderConfirmation from "./pages/OrderConfirmation";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import { useAppSelector } from "./lib/hooks";
+import { Routes, Route } from "react-router-dom";
+import Header from "./components/Header";
 import InfoDialog from "./components/Dialog/InfoDialog";
+import { ContactList } from "./components/contacts/ContactList";
 
 const App: React.FC = () => {
-  const { isShowInfoDialog, infoMessage } = useAppSelector(
-    (state) => state.app
-  );
   return (
     <>
-      <div className="bg-gray-50">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/item/:id" element={<Item />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/order-confirmation" element={<OrderConfirmation />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-        </Routes>
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <main className="container mx-auto px-4 py-8">
+          <ContactList />
+        </main>
       </div>
-      <InfoDialog
-        isOpen={isShowInfoDialog}
-        title={infoMessage.title}
-        content={infoMessage.content}
-        imgUrl={infoMessage.imgUrl}
-        buttonText={infoMessage.buttonText}
-        closeModal={infoMessage.onClose}
-      />
     </>
   );
 };
