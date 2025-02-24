@@ -42,7 +42,7 @@ export const ContactForm: React.FC<ContactFormProps> = ({ contact, onClose }) =>
     initialValues: {
       name: contact?.name ?? '',
       email: contact?.email ?? '',
-      phone: contact?.phone ?? '',
+      phone: contact?.phone ?? undefined,
     },
     validationSchema,
     onSubmit: async (values) => {
