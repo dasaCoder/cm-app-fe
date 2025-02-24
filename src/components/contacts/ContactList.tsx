@@ -21,10 +21,8 @@ export const ContactList: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   useEffect(() => {
-    if (!loading) {
-      dispatch(fetchContacts());
-    }
-  }, [loading, dispatch]);
+    dispatch(fetchContacts());
+  }, [dispatch]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
