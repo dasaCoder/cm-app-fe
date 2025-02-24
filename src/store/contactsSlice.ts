@@ -1,6 +1,10 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
+// Get API URL from environment variable with fallback
+const BASE_API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+const API_URL = `${BASE_API_URL}/contacts`;
+
 export interface Contact {
   id: number;
   name: string;
@@ -20,8 +24,6 @@ const initialState: ContactsState = {
   loading: false,
   error: null,
 };
-
-const API_URL = 'http://localhost:3000/contacts';
 
 export const addContact = createAsyncThunk(
   'contacts/addContact',

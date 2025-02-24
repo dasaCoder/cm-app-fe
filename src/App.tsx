@@ -1,7 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
 import Header from "./components/Header";
-import InfoDialog from "./components/Dialog/InfoDialog";
 import { ContactList } from "./components/contacts/ContactList";
 
 const App: React.FC = () => {
