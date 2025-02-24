@@ -6,6 +6,9 @@ import { fetchContacts, deleteContact } from "../../store/contactsSlice";
 import { Contact } from "../../types/contact";
 import { ContactForm } from "./ContactForm";
 
+type SortField = 'name' | 'createdAt';
+type SortOrder = 'asc' | 'desc';
+
 export const ContactList: React.FC = () => {
   const dispatch = useAppDispatch();
   const { contacts, loading, error } = useSelector(
@@ -14,6 +17,8 @@ export const ContactList: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | undefined>();
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   useEffect(() => {
     if (!loading) {
@@ -21,11 +26,31 @@ export const ContactList: React.FC = () => {
     }
   }, [loading, dispatch]);
 
-  const filteredContacts = contacts.filter(
-    (contact) =>
-      contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contact.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      // Toggle order if clicking the same field
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new field and default to ascending
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const sortedAndFilteredContacts = contacts
+    .filter(
+      (contact) =>
+        contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contact.email.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      const modifier = sortOrder === 'asc' ? 1 : -1;
+      if (sortField === 'name') {
+        return a.name.localeCompare(b.name) * modifier;
+      } else {
+        return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * modifier;
+      }
+    });
 
   const handleEdit = (contact: Contact) => {
     setSelectedContact(contact);
@@ -57,16 +82,40 @@ export const ContactList: React.FC = () => {
         </button>
       </div>
 
-      <input
-        type="text"
-        placeholder="Search contacts..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="w-full mb-4 px-4 py-2 border rounded-md"
-      />
+      <div className="flex gap-2 mb-4">
+        <input
+          type="text"
+          placeholder="Search contacts..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="flex-1 px-4 py-2 border rounded-md"
+        />
+        
+        <button
+          onClick={() => handleSort('name')}
+          className={`px-4 py-2 rounded-md border ${
+            sortField === 'name' 
+              ? 'bg-indigo-100 border-indigo-300' 
+              : 'bg-white border-gray-300'
+          }`}
+        >
+          Name {sortField === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
+        </button>
+        
+        <button
+          onClick={() => handleSort('createdAt')}
+          className={`px-4 py-2 rounded-md border ${
+            sortField === 'createdAt' 
+              ? 'bg-indigo-100 border-indigo-300' 
+              : 'bg-white border-gray-300'
+          }`}
+        >
+          Date {sortField === 'createdAt' && (sortOrder === 'asc' ? '↑' : '↓')}
+        </button>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredContacts.map((contact) => (
+        {sortedAndFilteredContacts.map((contact) => (
           <div
             key={contact.id}
             className="p-4 border rounded-lg shadow-sm bg-white"
